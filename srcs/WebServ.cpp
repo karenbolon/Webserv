@@ -3,21 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   WebServ.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:26:45 by keramos-          #+#    #+#             */
-/*   Updated: 2025/05/10 09:23:04 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/05/13 12:00:23 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/WebServ.hpp"
-/*
-#include "../include/ServerSocket.hpp"
-#include "../include/ClientConnection.hpp"
-#include "../include/ConfigParser.hpp"
-#include <iostream>
-#include <fstream>
-*/
 
 int g_signal = -1;
 
@@ -126,20 +119,13 @@ int	init_webserv(std::string configPath) {
 
 int main(int ac, char **av) {
 
-	signal(SIGINT, handleSignal);
+	setupSignal();
 	std::string configPath;
-	std::cout << "		My Webserv in C++98" << std::endl;
-	std::cout << "--------------------------------------------------\n " << std::endl;
 
-	if (ac == 1)
-		configPath = "conf/default.conf";
-	else if (ac == 2)
-		configPath = av[1];
-	else{
-		std::cout << "Too many arguments!!\nUsage: ./webserv [config_file]" << std::endl;
-		return (EXIT_FAILURE);
-	}
+	if (!parseArguments(ac, av, configPath))
+		return EXIT_FAILURE;
+
+	artwelcom();
 	std::cout << "Using configuration file: " << configPath << std::endl;
-
 	return (init_webserv(configPath));
 }

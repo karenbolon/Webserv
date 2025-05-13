@@ -41,7 +41,7 @@ bool	ClientConnection::receiveMessage() {
 			return false;
 		}
 		std::string	fileName(nameBuffer, nameLen);
-	
+
 		//Read file size
 		uint32_t	fileSize = 0;
 		bytes = recv(_fd, &fileSize, sizeof(fileSize), 0);
@@ -55,7 +55,7 @@ bool	ClientConnection::receiveMessage() {
 			std::cerr << "Failed to open file for writing\n";
 			return false;
 		}
-	
+
 		//read exactly fileSize bytes
 		uint32_t remaining = fileSize;
 		while (remaining > 0) {
@@ -78,10 +78,10 @@ bool	ClientConnection::receiveMessage() {
 	return true;
 }
 
-bool	ClientConnection::sendMessage() {
-	const	std::string	response = 
+// bool	ClientConnection::sendMessage() {
+// 	const	std::string	response =
 
-}
+// }
 
 std::string	ClientConnection::getMessage() const {
 	return _message;
@@ -95,5 +95,3 @@ void	ClientConnection::closeConnection() {
 	if (_fd != -1)
 		close(_fd);
 }
-
-

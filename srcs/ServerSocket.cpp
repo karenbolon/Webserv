@@ -20,14 +20,14 @@ ServerSocket::~ServerSocket() {
 
 /*
 htons (Host To Network Short): converts machine byte to network byte order
-Basically, you’ll want to convert the numbers to Network Byte Order before 
+Basically, you’ll want to convert the numbers to Network Byte Order before
 they go out on the wire, and convert them to Host Byte Order as they come in off the wire.
-	
+
 INADDR_ANY is used when we don't want to bind our socket to any particular
 IP and instead make it listen to all IPs available
 
 Bind the socket, tell it to listen to the socket referred to by serverSocket_fd.
-Then we accept the connection request that is received on the socket 
+Then we accept the connection request that is received on the socket
 the app is listening to
 */
 bool	ServerSocket::init(int port) {
@@ -41,8 +41,8 @@ bool	ServerSocket::init(int port) {
 		return -1;
 	}
 	sockaddr_in serverAddress;
-	serverAddress.sin_family = AF_INET;	
-	serverAddress.sin_port = htons(port); 
+	serverAddress.sin_family = AF_INET;
+	serverAddress.sin_port = htons(port);
 	serverAddress.sin_addr.s_addr = INADDR_ANY;
 
 	if (!safe_bind(_fd, serverAddress)) {
@@ -58,7 +58,7 @@ bool	ServerSocket::init(int port) {
 }
 
 int		ServerSocket::acceptClient() {
-	int	client_fd = accept(_fd, nullptr, nullptr);
+	int	client_fd = accept(_fd, NULL, NULL);
 	if (client_fd == -1) {
 		std::cerr << "Failed to accept: " << std::strerror(errno) << std::endl;
 //		closeSocket();
