@@ -55,23 +55,46 @@ endef
 SRC_DIR = srcs
 INC_DIR = includes
 TEST_SRC_DIR = test
-TEST_CLIENTS = $(TEST_SRC_DIR)/test_client.cpp
+
 OBJ_DIR = objs
 
 SRCS = 	$(SRC_DIR)/WebServ.cpp \
 		$(SRC_DIR)/ServerSocket.cpp $(SRC_DIR)/ClientConnection.cpp $(SRC_DIR)/helperFunction.cpp \
 		$(SRC_DIR)/ConfigParser.cpp $(SRC_DIR)/LocationConfig.cpp $(SRC_DIR)/ServerConfig.cpp
-		
 
 #patsubst is short for pattern substitution, works with items in multiple folders
 OBJS = $(notdir $(SRCS:.cpp=.o))
 OBJS := $(patsubst %, $(OBJ_DIR)/%,$(OBJS))
 
 # **************************************************************************** #
+#                                  TEST                                       #
+# **************************************************************************** #
+
+$(TEST_SRC_DIR)/client_upload_text: $(TEST_SRC_DIR)/client_upload_text.cpp \
+	$(SRC_DIR)/ConfigParser.cpp \
+	$(SRC_DIR)/ServerConfig.cpp \
+	$(SRC_DIR)/LocationConfig.cpp \
+	$(SRC_DIR)/helperFunction.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ $^ > /dev/null
+
+$(TEST_SRC_DIR)/client_upload_images: $(TEST_SRC_DIR)/client_upload_images.cpp \
+	$(SRC_DIR)/ConfigParser.cpp \
+	$(SRC_DIR)/ServerConfig.cpp \
+	$(SRC_DIR)/LocationConfig.cpp \
+	$(SRC_DIR)/helperFunction.cpp
+	@$(CXX) $(CXXFLAGS) -o $@ $^ > /dev/null
+
+TEST_CLIENTS = $(TEST_SRC_DIR)/client_upload_text.cpp \
+			   $(TEST_SRC_DIR)/client_upload_images.cpp
+
+
+test_clients: $(TEST_CLIENTS:.cpp=)
+
+# **************************************************************************** #
 #                                  RULES                                       #
 # **************************************************************************** #
 
-all: Start $(NAME) client End
+all: Start $(NAME) End
 
 Start :
 	@if [ -f $(NAME) ]; then \
@@ -86,10 +109,6 @@ $(NAME): $(OBJS)
 	@$(CXX) $(CXXFLAGS) -o $@ $^ > /dev/null
 	@echo "${CHECK} Compiling utilities! ${RT}"
 
-client: $(SRC_DIR)/test_client.cpp $(SRC_DIR)/ConfigParser.cpp $(SRC_DIR)/helperFunction.cpp \
-	$(SRC_DIR)/LocationConfig.cpp $(SRC_DIR)/ServerConfig.cpp
-	@$(CXX) $(CXXFLAGS) -o $@ $^ > /dev/null
-
 create_obj_dir:
 	@mkdir -p $(OBJ_DIR)
 	@echo "${CHECK} Object directory created!"
@@ -97,6 +116,12 @@ create_obj_dir:
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | create_obj_dir
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) -c $< -o $@ > /dev/null
+
+test: test_clients
+	@echo "🔧 Building test clients and running test suite..."
+	@./test/test.sh
+	@echo "${PINK}Testing...${RT}";
+	@echo "${CHECK} successfully compiled!$(RT)";
 
 End :
 	@echo "${PINK}WebServ...${RT}";
@@ -113,7 +138,8 @@ clean:
 
 fclean: clean
 	@echo "${ORG}==> Full clean - Removing binaries...${RT}"
-	@$(RM) $(NAME) client
+	@$(RM) $(NAME)
+	@$(RM) $(TEST_CLIENTS:.cpp=)
 	@echo "${CHECK} Full cleanup complete          🧹"
 
 re: fclean all

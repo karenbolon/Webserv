@@ -9,3 +9,6 @@ do
   echo "Starting text client $i..."
   ./client_texts &
 done
+
+wait
+echo "✅ All concurrent clients finished."

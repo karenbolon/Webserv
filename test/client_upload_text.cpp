@@ -5,57 +5,10 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/13 16:05:39 by kbolon            #+#    #+#             */
-/*   Updated: 2025/05/13 16:37:01 by kbolon           ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#include <cstring>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <sys/socket.h> 
-#include <cctype> //for std::tolower
-#include <dirent.h> //to allow access to file directory
-//#include "../include/WebServ.hpp"
-#include "../include/ConfigParser.hpp"
-//#include "../include/ServerSocket.hpp"
-#include <arpa/inet.h>
-
-std::string toLower(const std::string& str) {
-	std::string result;
-	for (size_t i = 0; i < str.size(); ++i)
-		result += std::tolower(str[i]);
-	return result;
-}
-
-bool isFile(const std::string& name) {
-	std::string	lowerName = toLower(name);
-	const char* extensions[] = {".txt", ".pdf", ".cpp", ".c", ".h", ".sh", ".py", ".hpp", ".md"};
-	int count = sizeof(extensions) / sizeof(extensions[0]);
-	for (int i = 0; i < count; i++) {
-		const char* ext = extensions[i];
-		size_t	extLen = std::strlen(ext);
-		if (lowerName.size() >= extLen && lowerName.compare(lowerName.size() - extLen, extLen, ext) == 0)
-			return true;
-	}
-	return false;
-}
-
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   client_upload_images.cpp                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/13 16:14:38 by kbolon            #+#    #+#             */
-/*   Updated: 2025/05/13 16:35:02 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/05/13 18:03:18 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
 
 #include <cstring>
 #include <iostream>
