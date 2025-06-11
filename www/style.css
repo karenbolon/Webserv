@@ -1,83 +1,231 @@
-/* Reset & Font */
-body, html {
+/* Reset & Base Styles */
+* {
 	margin: 0;
 	padding: 0;
-	height: 100%;
-	font-family: 'Comic Sans MS', cursive, sans-serif;
-	text-align: center;
-  }
+	box-sizing: border-box;
+}
 
-  .background {
-	background: linear-gradient(to bottom, #fcd8f7, #d6cbff);
+body {
+	font-family: 'Arial', sans-serif;
+	background: linear-gradient(135deg, #e6d4ff 0%, #ffd4e6 50%, #ffe6f0 100%);
 	min-height: 100vh;
 	padding: 20px;
-	box-sizing: border-box;
-	text-align: center;
-	position: relative;
-	overflow-x: hidden;
-  }
+}
 
-  /* Cute Heading */
-  h1 {
-	color: #8149cf;
-	font-size: 3rem;
-	margin: 40px 0 20px;
-	line-height: 1.2;
-  }
-
-  /* Navigation Buttons */
-  nav {
-	display: flex;
-	justify-content: center;
-	gap: 10px;
-  }
-
-  .nav-btn {
-	background-color: #ffd9ec;
-	border: 2px solid #ffaadd;
-	border-radius: 20px;
-	padding: 10px 20px;
-	font-weight: bold;
-	color: #8a2b8a;
-	cursor: pointer;
-	box-shadow: 2px 2px 5px #dcbef7;
-  }
-
-  /* Photo Grid */
-  .photo-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-	gap: 20px;
-	max-width: 600px;
+/* Container */
+.container {
+	max-width: 1200px;
 	margin: 0 auto;
-	padding: 20px 0;
-  }
+}
 
-  /* Upload Button */
-  .upload-btn {
-	text-align: center;
-	background-color: #ffc896;
-	border: 2px solid #ffb57f;
-	border-radius: 20px;
+/* Headers */
+h1 {
+	color: #ff1493;
+	font-size: 3rem;
+	margin-bottom: 10px;
+	position: relative;
+	display: inline-block;
+}
+
+h2 {
+	color: #ff1493;
+	font-size: 2rem;
+	margin-bottom: 20px;
+}
+
+/* Buttons */
+.btn {
 	padding: 12px 30px;
-	font-weight: bold;
-	color: #8a2b2b;
-	margin-top: 30px;
+	border: none;
+	border-radius: 25px;
+	font-size: 1rem;
 	cursor: pointer;
-	box-shadow: 2px 2px 5px #f4d1b7;
+	text-decoration: none;
+	display: inline-block;
+	transition: all 0.3s ease;
+}
 
-  }
+.btn-primary {
+	background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+	color: white;
+}
 
-  /* Optional: Clouds & Stars Background Decorations */
-/*  .background::before,
-  .background::after {
-	content: '';
+.btn-primary:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
+}
+
+.btn-secondary {
+	background: white;
+	color: #ff1493;
+	border: 2px solid #ff1493;
+}
+
+.btn-secondary:hover {
+	background: #ff1493;
+	color: white;
+}
+
+/* Navigation */
+.nav-buttons {
+	display: flex;
+	gap: 15px;
+	justify-content: center;
+	margin-bottom: 40px;
+}
+
+.nav-btn {
+	padding: 12px 30px;
+	background: white;
+	color: #ff1493;
+	border: 2px solid #ff1493;
+	border-radius: 25px;
+	text-decoration: none;
+	font-weight: bold;
+	transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+	background: #ff1493;
+	color: white;
+	transform: translateY(-2px);
+	box-shadow: 0 5px 15px rgba(255, 20, 147, 0.3);
+}
+
+/* Cards */
+.card {
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 25px;
+	padding: 50px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+	position: relative;
+	overflow: hidden;
+}
+
+/* Animations */
+@keyframes pulse {
+	0% { transform: scale(1); }
+	50% { transform: scale(1.05); }
+	100% { transform: scale(1); }
+}
+
+@keyframes float {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-20px); }
+}
+
+@keyframes sparkle {
+	0%, 100% { opacity: 0.3; transform: scale(1); }
+	50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes rotate {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/* Decorative Elements */
+.sparkle {
 	position: absolute;
-	width: 100%;
-	height: 100%;
-*/	/*background-image: url('clouds-and-stars.svg');  You can use your PNG here */
-/*	background-repeat: repeat;
-	background-size: contain;
-	z-index: 0;
+	color: #ffb6c1;
+	animation: sparkle 2s ease-in-out infinite;
+}
+
+.sparkle-1 { top: -10px; left: -20px; animation-delay: 0s; }
+.sparkle-2 { top: -15px; right: -25px; animation-delay: 0.5s; }
+.sparkle-3 { bottom: -10px; left: 50%; animation-delay: 1s; }
+
+/* Floating decorations */
+.float-decoration {
+	position: fixed;
+	pointer-events: none;
 	opacity: 0.3;
-  }*/
+	animation: float-around 20s ease-in-out infinite;
+}
+
+@keyframes float-around {
+	0%, 100% { transform: translate(0, 0) rotate(0deg); }
+	25% { transform: translate(100px, -100px) rotate(90deg); }
+	50% { transform: translate(-50px, -200px) rotate(180deg); }
+	75% { transform: translate(-100px, -50px) rotate(270deg); }
+}
+
+.float-1 { top: 10%; left: 5%; font-size: 30px; animation-delay: 0s; }
+.float-2 { top: 60%; right: 10%; font-size: 40px; animation-delay: 5s; }
+.float-3 { bottom: 20%; left: 15%; font-size: 35px; animation-delay: 10s; }
+
+/* Utility Classes */
+.text-center { text-align: center; }
+.mb-10 { margin-bottom: 10px; }
+.mb-20 { margin-bottom: 20px; }
+.mb-30 { margin-bottom: 30px; }
+.mb-40 { margin-bottom: 40px; }
+.mb-50 { margin-bottom: 50px; }
+
+/* Chat bubble */
+.chat-bubble {
+	position: fixed;
+	bottom: 30px;
+	right: 30px;
+	width: 60px;
+	height: 60px;
+	background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-size: 30px;
+	cursor: pointer;
+	box-shadow: 0 5px 20px rgba(255, 20, 147, 0.4);
+	transition: transform 0.3s ease;
+}
+
+.chat-bubble:hover {
+	transform: scale(1.1);
+}
+
+/* Status bar */
+.status-bar {
+	position: fixed;
+	bottom: 30px;
+	left: 30px;
+	background: rgba(255, 255, 255, 0.9);
+	padding: 15px 25px;
+	border-radius: 25px;
+	box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+	display: flex;
+	align-items: center;
+	gap: 20px;
+}
+
+.status-item {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	color: #666;
+	font-size: 0.9rem;
+}
+
+.status-dot {
+	width: 8px;
+	height: 8px;
+	background: #4caf50;
+	border-radius: 50%;
+	animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+	0%, 100% { transform: scale(1); opacity: 1; }
+	50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+.footer {
+	text-align: center;
+	bottom: 30px;
+	right: 700px;
+	position: fixed;
+	padding: 20px;
+	color: #8e44ad;
+	font-size: 14px;
+}

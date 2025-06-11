@@ -2,20 +2,18 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8" />
-	<title>401 Unauthorized/Unauthenticated</title>
-	<style>
-		body {
-			background-color: #ffe6f0;
-			color: #cc3366;
-			font-family: 'Comic Sans MS', cursive;
-			text-align: center;
-			padding: 50px;
-		}
-	</style>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>401 - Unauthorized/Unauthenticated</title>
+	<link rel="stylesheet" href="/style.css"/>
+	<link rel="stylesheet" href="/css/error.css">
 </head>
 <body>
-	<h1>😿 401 Unauthorized/Unauthenticated</h1>
-	<p>the request has not been applied because it lacks valid authentication credentials for the target resource</p>
-	<a href="/">Take me home</a>
+	<div class="error-container"></div>
+		<h1>401</h1>
+		<div class="emoji">🔒</div>
+		<h1>Unauthorized/Unauthenticated</h1>
+		<p>the request has not been applied because it lacks valid authentication credentials for the target resource</p>
+		<a href="/" class="home-link">Go Home</a>
+	</div>
 </body>
 </html>

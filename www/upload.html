@@ -1,15 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Upload to My Cute Photo Wall</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Upload Files</title>
+	<link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="/css/upload.css">
 </head>
 <body>
-  <h1>Upload a new photo 🐾</h1>
-  <form action="/upload" method="POST" enctype="multipart/form-data">
-    <input type="file" name="photo">
-    <button type="submit">Upload</button>
-  </form>
-  <a href="/">Back to Wall</a>
+	<div class="upload-container">
+		<div class="decoration heart heart-1">💖</div>
+		<div class="decoration heart heart-2">💖</div>
+		<div class="decoration heart heart-3">💖</div>
+
+		<h1>Upload Files</h1>
+		<p class="subtitle">Share your favorite moments! ✨</p>
+
+		<form class="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+			<div class="file-drop-area">
+				<span class="fake-btn">Choose files</span>
+				<span class="file-msg">or drag and drop files here</span>
+				<input class="file-input" type="file" name="files" multiple onchange="handleFiles(this.files)">
+			</div>
+
+			<div class="file-list" id="fileList"></div>
+
+			<button type="submit" class="upload-btn" id="uploadBtn" disabled>Upload Files</button>
+		</form>
+
+		<div class="back-link">
+			<a href="/">← Back to Gallery</a>
+		</div>
+	</div>
+
+	<script>
+		const fileInput = document.querySelector('.file-input');
+		const fileList = document.getElementById('fileList');
+		const uploadBtn = document.getElementById('uploadBtn');
+		const dropArea = document.querySelector('.file-drop-area');
+		let selectedFiles = [];
+
+		// Drag and drop functionality
+		['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+			dropArea.addEventListener(eventName, preventDefaults, false);
+		});
+
+		function preventDefaults(e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+
+		['dragenter', 'dragover'].forEach(eventName => {
+			dropArea.addEventListener(eventName, highlight, false);
+		});
+
+		['dragleave', 'drop'].forEach(eventName => {
+			dropArea.addEventListener(eventName, unhighlight, false);
+		});
+
+		function highlight(e) {
+			dropArea.classList.add('is-active');
+		}
+
+		function unhighlight(e) {
+			dropArea.classList.remove('is-active');
+		}
+
+		dropArea.addEventListener('drop', handleDrop, false);
+
+		function handleDrop(e) {
+			const dt = e.dataTransfer;
+			const files = dt.files;
+			handleFiles(files);
+		}
+
+		function handleFiles(files) {
+			selectedFiles = [...files];
+			displayFiles();
+			uploadBtn.disabled = selectedFiles.length === 0;
+		}
+
+		function displayFiles() {
+			fileList.innerHTML = '';
+			selectedFiles.forEach((file, index) => {
+				const fileItem = document.createElement('div');
+				fileItem.className = 'file-item';
+				fileItem.innerHTML = `
+					<div class="file-item-name">
+						<div class="file-icon">📎</div>
+						<span>${file.name}</span>
+					</div>
+					<button type="button" class="remove-file" onclick="removeFile(${index})">×</button>
+				`;
+				fileList.appendChild(fileItem);
+			});
+		}
+
+		function removeFile(index) {
+			selectedFiles.splice(index, 1);
+			displayFiles();
+			uploadBtn.disabled = selectedFiles.length === 0;
+
+			// Update file input
+			const dt = new DataTransfer();
+			selectedFiles.forEach(file => dt.items.add(file));
+			fileInput.files = dt.files;
+		}
+
+	</script>
 </body>
 </html>

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   WebServ.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/05/26 16:01:47 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/11 15:33:55 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,8 +62,8 @@ void		runEventLoop(std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>
 				std::map<int, ClientConnection*>& clients, std::map<int, ServerSocket*>& clientToServer);
 bool 		initialiseSockets(const std::vector<ServerConfig>& servers, std::vector<ServerSocket*>& serverSockets,
 				std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket);
-void		handleExistingClient(int fd, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, size_t& i, 
+void		handleExistingClient(int fd, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, size_t& i,
 				const ServerConfig& config);
-void		handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, 
+void		handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients,
 				std::map<int, ServerSocket*>& clientToServer);
 LocationConfig matchLocation(const std::string& path, const ServerConfig& config);

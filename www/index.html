@@ -1,30 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Cute Photo Wall</title>
-  <link rel="stylesheet" href="/style.css"/>
-  <link rel="icon" href="/favicon.ico">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>My Cute Photo Gallery</title>
+	<link rel="stylesheet" href="/style.css"/>
+	<link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
-  <div class="background">
-    <header>
-      <nav>
-        <button class="nav-btn">Home</button>
-        <button class="nav-btn">Upload</button>
-        <button class="nav-btn">About</button>
-      </nav>
-    </header>
+	<!-- Floating decorations -->
+	<div class="float-decoration float-1">✨</div>
+	<div class="float-decoration float-2">💖</div>
+	<div class="float-decoration float-3">⭐</div>
 
-    <h1>My Cute<br/>Photo Wall 💖</h1>
+	<div class="container">
+		<header>
+			<h1>
+				<span class="sparkle sparkle-1">✨</span>
+				My Cute Photo Gallery
+				<span class="sparkle sparkle-2">✨</span>
+				<span class="sparkle sparkle-3">⭐</span>
+			</h1>
+			<p class="subtitle">A collection of beautiful moments</p>
+		</header>
 
-    <div class="photo-grid">
-      <!-- Add photos here -->
-    </div>
+		<nav class="nav-buttons">
+			<a href="upload.html" class="nav-btn">📸 Upload Photos</a>
+			<a href="/about" class="nav-btn">💕 About</a>
+		</nav>
 
-    <a href="upload.html" class="upload-btn">Upload</a>
+		<div class="photo-grid">
+			<!-- Example photo cards -->
+			<div class="photo-card">
+				<div class="photo-placeholder">📷</div>
+				<div class="photo-info">
+					<div class="photo-actions">
+						<span>Just now</span>
+						<button class="like-btn">
+							<span>♥</span>
+							<span>Like</span>
+						</button>
+					</div>
+				</div>
+			</div>
 
-  </div>
+			<div class="photo-card">
+				<div class="photo-placeholder">🌸</div>
+				<div class="photo-info">
+					<div class="photo-actions">
+						<span>2 mins ago</span>
+						<button class="like-btn liked">
+							<span>♥</span>
+							<span>Liked</span>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="photo-card">
+				<div class="photo-placeholder">🌈</div>
+				<div class="photo-info">
+					<div class="photo-actions">
+						<span>5 mins ago</span>
+						<button class="like-btn">
+							<span>♥</span>
+							<span>Like</span>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="photo-card">
+				<div class="photo-placeholder">⭐</div>
+				<div class="photo-info">
+					<div class="photo-actions">
+						<span>10 mins ago</span>
+						<button class="like-btn">
+							<span>♥</span>
+							<span>Like</span>
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Chat bubble -->
+	<div class="chat-bubble">💬</div>
+
+	<!-- Status bar -->
+	<div class="status-bar">
+		<div class="status-item">
+			<div class="status-dot"></div>
+			<span>Server Online</span>
+		</div>
+		<!-- <div class="status-item">
+			<span>Port: 8081</span>
+		</div> -->
+		<div class="status-item">
+			<span>Port: <span id="port-span"></span></span>
+		</div>
+	</div>
+
+	<script>
+		// Add interactivity to like buttons
+		document.querySelectorAll('.like-btn').forEach(btn => {
+			btn.addEventListener('click', function() {
+				this.classList.toggle('liked');
+			});
+		});
+
+		// Set the port number dynamically
+		// document.addEventListener('DOMContentLoaded', function() {
+		// 	const portSpan = document.getElementById('port-span');
+		// 	portSpan.textContent = window.location.port || '8081'; // Default to 8081 if no port is specified
+		// });
+		const port = window.location.port || (window.location.protocol === "https:" ? "443" : "80");
+		document.getElementById('port-span').textContent = port;
+	</script>
+
+	<!-- Footer -->
+	<div class="footer">
+		<p>&copy; 2025 My Cute Photo Gallery. All rights reserved.</p>
+		<p>Made with 💖 and sprinkles of ✨ by Keramos- and Kbolon</p>
+	</div>
 </body>
 </html>

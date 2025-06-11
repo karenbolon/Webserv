@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Upload Successful!</title>
+	<link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="/css/success.css">
+</head>
+<body>
+	<div class="success-container">
+		<h1>
+			<div class="success-icon"></div>
+			<span class="sparkle sparkle-1">✨</span>
+			{{action}} Successful! 🎉
+			<span class="sparkle sparkle-2">✨</span>
+			<span class="sparkle sparkle-3">⭐</span>
+		</h1>
+		<p class="message">Your file has been {{action}} successfully.</p>
+
+		<div class="file-name">{{filename}}</div>
+
+		<div class="actions">
+			<a href="/upload" class="btn btn-primary">Upload Another</a>
+			<a href="/" class="btn btn-secondary">Go Home</a>
+		</div>
+	</div>
+</body>
+</html>

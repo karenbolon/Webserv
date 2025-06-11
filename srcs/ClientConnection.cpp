@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/05/29 14:09:22 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/11 17:36:32 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,7 @@ ClientConnection::~ClientConnection() {
 -gracefully handles slow clients and disconnects
 -exits cleanly after each transfer
 */
-void ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config) {
+int ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config) {
 	//switched to vector to handle images and pdfs
 	char buffer[8192];//8 kb buffer size
 	int bytes = recv(client_fd, buffer, sizeof(buffer), 0);
@@ -62,7 +62,7 @@ void ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config
 			std::string body = getErrorPageBody(500, config);
 			sendHtmlResponse(client_fd, 500, body);
 		}
-		return;
+		return bytes;
 	}
 	this->_buffer.insert(this->_buffer.end(), buffer, buffer + bytes);
 	std::string reqStr(_buffer.begin(), _buffer.end());
@@ -71,7 +71,7 @@ void ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config
 		std::cerr << "❌ Incomplete headers\n";
 		std::string body = getErrorPageBody(400, config);
 		sendHtmlResponse(client_fd, 400, body);
-		return;
+		return bytes;
 	}
 	// Found end of headers, check for Content-Length
 	size_t contentLengthPos = reqStr.find("Content-Length:");
@@ -83,9 +83,10 @@ void ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config
 			size_t totalContentLength = atoi(lengthStr.c_str());
 			size_t bodyStart = headerEnd + 4;
 			if (_buffer.size() - bodyStart < totalContentLength)
-				return;
+				return bytes;
 		}
 	}
+	return bytes;
 }
 
 bool ClientConnection::isRequestComplete() const {

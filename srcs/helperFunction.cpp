@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   helperFunction.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/11 14:13:53 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/11 16:31:55 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,9 +38,9 @@ int	safe_socket(int domain, int type, int protocol) {
 /*
 int bind(int socket, const struct sockaddr *address, socklen_t address_len)
 
-The sin_port field is set to the port to which the application must bind. 
-It must be specified in network byte order. If sin_port is set to 0, the 
-caller leaves it to the system to assign an available port. 
+The sin_port field is set to the port to which the application must bind.
+It must be specified in network byte order. If sin_port is set to 0, the
+caller leaves it to the system to assign an available port.
 The application can call getsockname() to discover the port number assigned.
 */
 bool	safe_bind(int fd, sockaddr_in & addr) {
@@ -123,7 +123,14 @@ void serveStaticFile(std::string path, int client_fd, const ServerConfig &config
 
 	std::string body((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	file.close();
-	sendHtmlResponse(client_fd, 200, body);
+	// sendHtmlResponse(client_fd, 200, body);
+	Response resp;
+	std::string contentType = resp.getContentType(fullPath);
+	std::string response = Response::build(200, body, contentType);
+	ssize_t sent = send(client_fd, response.c_str(), response.size(), 0);
+	if (sent != (ssize_t)response.size()) {
+			std::cerr << "❌ Failed to send response for status code: " << sent << " of " << response.size() << " bytes\n";
+	}
 }
 
 std::string extractBoundary(const std::string& request) {
@@ -153,7 +160,7 @@ std::string extractBoundary(const std::string& request) {
 		} else {
 			return request.substr(boundaryStart, boundaryEnd - boundaryStart);
 		}
-	}	
+	}
 }
 
 /*
@@ -274,7 +281,7 @@ void handleUpload(const std::string &request, int client_fd, const ServerConfig 
 
 	// Send success response with proper charset
 	// Create a response with a complete HTML5 document
-	std::string successPath = config.root + "/templates/upload_success.html";
+	std::string successPath = config.root + "/templates/success.html";
 	std::ifstream successFile(successPath.c_str());
 	std::string body;
 
@@ -289,12 +296,14 @@ void handleUpload(const std::string &request, int client_fd, const ServerConfig 
 }
 
 void sendHtmlResponse(int fd, int code, const std::string& body) {
+
 	std::string response = Response::build(code, body, "text/html");
 	ssize_t sent = send(fd, response.c_str(), response.size(), 0);
 	if (sent != (ssize_t)response.size()) {
 		std::cerr << "❌ Failed to send response for status code: " << sent << " of " << response.size() << " bytes\n";
 	}
 }
+
 
 /*
 This function looks up the error code per config map, if found,
@@ -305,16 +314,17 @@ std::string	getErrorPageBody(int code, const ServerConfig& config) {
 	std::map<int, std::string>::const_iterator it = config.error_pages.find(code);
 	if (it != config.error_pages.end()) {
 		std::string fullPath = config.root;
-		if (!fullPath.empty() && fullPath[fullPath.length() - 1] != '/' && it->second[0])
+		if (!fullPath.empty() && fullPath[fullPath.length() - 1] != '/')
 			fullPath += "/";
 		fullPath += it->second;
 		std::cerr << "Looking for: " << fullPath << std::endl;
-		
+
 		std::ifstream file(fullPath.c_str());
 		if (file.is_open()) {
 			std::string content((std::istreambuf_iterator<char>(file)),
 								std::istreambuf_iterator<char>());
 			file.close();
+			return content;
 		}
 	}
 	std::ostringstream oss;
@@ -335,7 +345,7 @@ We do not use exact match as an exact match would miss: location /images/cats/cu
  */
 LocationConfig matchLocation(const std::string& path, const ServerConfig& config) {
 	const std::vector<LocationConfig>& locations = config.locations;
-	
+
 	LocationConfig bestMatch;
 	size_t length = 0;
 

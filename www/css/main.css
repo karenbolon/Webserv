@@ -1,0 +1,141 @@
+/* Photo Gallery Specific Styles */
+
+/* Gallery Header */
+header {
+	text-align: center;
+	margin-bottom: 50px;
+	position: relative;
+}
+
+.subtitle {
+	color: #999;
+	font-size: 1.2rem;
+}
+
+/* Photo Grid */
+.photo-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	gap: 20px;
+	margin-bottom: 50px;
+}
+
+.photo-card {
+	background: white;
+	border-radius: 20px;
+	overflow: hidden;
+	box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
+	position: relative;
+}
+
+.photo-card:hover {
+	transform: translateY(-5px) rotate(-1deg);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.photo-card:nth-child(even):hover {
+	transform: translateY(-5px) rotate(1deg);
+}
+
+.photo-placeholder {
+	width: 100%;
+	height: 250px;
+	background: linear-gradient(135deg, #ffe6f0 0%, #e6d4ff 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #ff69b4;
+	font-size: 50px;
+}
+
+.photo-card img {
+	width: 100%;
+	height: 250px;
+	object-fit: cover;
+}
+
+.photo-info {
+	padding: 20px;
+}
+
+.photo-actions {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	color: #999;
+	font-size: 0.9rem;
+}
+
+/* Like Button */
+.like-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	color: #ff69b4;
+	transition: transform 0.2s ease;
+}
+
+.like-btn:hover {
+	transform: scale(1.1);
+}
+
+.like-btn.liked {
+	color: #ff1493;
+}
+
+/* Chat Bubble */
+.chat-bubble {
+	position: fixed;
+	bottom: 30px;
+	right: 30px;
+	width: 60px;
+	height: 60px;
+	background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-size: 30px;
+	cursor: pointer;
+	box-shadow: 0 5px 20px rgba(255, 20, 147, 0.4);
+	transition: transform 0.3s ease;
+}
+
+.chat-bubble:hover {
+	transform: scale(1.1);
+}
+
+/* Status Bar */
+.status-bar {
+	position: fixed;
+	bottom: 30px;
+	left: 30px;
+	background: rgba(255, 255, 255, 0.9);
+	padding: 15px 25px;
+	border-radius: 25px;
+	box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+	display: flex;
+	align-items: center;
+	gap: 20px;
+}
+
+.status-item {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	color: #666;
+	font-size: 0.9rem;
+}
+
+.status-dot {
+	width: 8px;
+	height: 8px;
+	background: #4caf50;
+	border-radius: 50%;
+	animation: pulse 2s ease-in-out infinite;
+}

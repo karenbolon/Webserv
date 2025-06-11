@@ -1,0 +1,235 @@
+body.upload-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+}
+
+.upload-container {
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 25px;
+	top: 200px;
+	margin: 0 auto;
+	padding: 50px;
+	max-width: 800px;
+	width: 100%;
+	border-radius: 25px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+	text-align: center;
+	position: relative;
+	overflow: hidden;
+}
+
+.upload-container::before {
+	content: '';
+	position: absolute;
+	top: -50%;
+	left: -50%;
+	width: 200%;
+	height: 200%;
+	background: radial-gradient(circle, rgba(255, 182, 193, 0.1) 0%, transparent 70%);
+	animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+h1 {
+	color: #ff1493;
+	text-align: center;
+	margin-bottom: 10px;
+	font-size: 2.5rem;
+	position: relative;
+	z-index: 1;
+}
+
+.subtitle {
+	color: #999;
+	text-align: center;
+	margin-bottom: 40px;
+	position: relative;
+	z-index: 1;
+}
+
+.upload-form {
+	position: relative;
+	z-index: 1;
+}
+
+.file-drop-area {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 60px 20px;
+	border: 3px dashed #ffb6c1;
+	border-radius: 20px;
+	transition: all 0.3s ease;
+	cursor: pointer;
+	background: rgba(255, 182, 193, 0.05);
+	margin-bottom: 30px;
+}
+
+.file-drop-area.is-active {
+	background: rgba(255, 182, 193, 0.15);
+	border-color: #ff1493;
+}
+
+.file-drop-area:hover {
+	background: rgba(255, 182, 193, 0.1);
+	border-color: #ff69b4;
+}
+
+.fake-btn {
+	background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+	color: white;
+	padding: 12px 30px;
+	border-radius: 25px;
+	display: inline-block;
+	font-weight: bold;
+	transition: transform 0.3s ease;
+}
+
+.file-drop-area:hover .fake-btn {
+	transform: translateY(-2px);
+}
+
+.file-input {
+	position: absolute;
+	left: 0;
+	top: 0;
+	height: 100%;
+	width: 100%;
+	cursor: pointer;
+	opacity: 0;
+}
+
+.file-msg {
+	font-size: 1.1rem;
+	color: #666;
+	font-weight: 500;
+	text-align: center;
+}
+
+.file-list {
+	margin-top: 20px;
+}
+
+.file-item {
+	background: rgba(255, 182, 193, 0.1);
+	padding: 15px 20px;
+	border-radius: 15px;
+	margin-bottom: 10px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.file-item-name {
+	color: #333;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.file-icon {
+	width: 20px;
+	height: 20px;
+	background: #ff69b4;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-size: 12px;
+}
+
+.remove-file {
+	background: none;
+	border: none;
+	color: #ff1493;
+	cursor: pointer;
+	font-size: 20px;
+	transition: transform 0.2s ease;
+}
+
+.remove-file:hover {
+	transform: scale(1.2);
+}
+
+.upload-btn {
+	width: 100%;
+	padding: 15px;
+	background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+	color: white;
+	border: none;
+	border-radius: 25px;
+	font-size: 1.1rem;
+	font-weight: bold;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	margin-top: 20px;
+}
+
+.upload-btn:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
+}
+
+.upload-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.back-link {
+	text-align: center;
+	margin-top: 20px;
+}
+
+.back-link a {
+	color: #ff1493;
+	text-decoration: none;
+	font-weight: 500;
+	transition: color 0.3s ease;
+}
+
+.back-link a:hover {
+	color: #ff69b4;
+}
+
+/* Decorative elements */
+.decoration {
+	position: absolute;
+	pointer-events: none;
+}
+
+.heart {
+	/*color: rgba(255, 182, 193, 0.3);*/
+	font-size: 30px;
+	animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-20px); }
+}
+
+.heart-1 { top: 20%; right: 20%; animation-delay: 0s; }
+.heart-2 { top: 90%; left: 5%; animation-delay: 1s; }
+.heart-3 { bottom: 20%; right: 3%; animation-delay: 2s; }

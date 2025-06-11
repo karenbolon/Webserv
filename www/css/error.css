@@ -1,0 +1,107 @@
+/* Error Page Specific Styles */
+
+body.error-page {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+
+}
+
+.error-container {
+	max-width: 800px;
+	margin: 0 auto;
+	top: 200px;
+	background: white;
+	padding: 50px;
+	border-radius: 25px;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	text-align: center;
+	position: relative;
+	overflow: hidden;
+}
+
+.error-container h1 {
+	font-size: 4rem;
+	margin: 0;
+}
+
+.error-container h2 {
+	margin: 20px 0;
+}
+
+.error-container p {
+	font-size: 1.1rem;
+	line-height: 1.6;
+	color: #666;
+}
+
+.emoji {
+	font-size: 5rem;
+	margin: 20px 0;
+}
+
+.home-link {
+	display: inline-block;
+	margin-top: 30px;
+	padding: 12px 30px;
+	background-color: #ff1493;
+	color: white;
+	text-decoration: none;
+	border-radius: 25px;
+	transition: background-color 0.3s;
+}
+
+.home-link:hover {
+	background-color: #cc3366;
+}
+
+/* Error-specific colors */
+.error-400 { background-color: #fff0f5; }
+.error-400 .error-container h1 { color: #ff69b4; }
+.error-400 .error-container h2 { color: #d8627d; }
+.error-400 .home-link { background-color: #ff69b4; }
+.error-400 .home-link:hover { background-color: #ff1493; }
+
+.error-401 { background-color: #f0f8ff; }
+.error-401 .error-container h1 { color: #4682b4; }
+.error-401 .error-container h2 { color: #5f9ea0; }
+.error-401 .home-link { background-color: #4682b4; }
+.error-401 .home-link:hover { background-color: #4169e1; }
+
+.error-403 { background-color: #ffe4e1; }
+.error-403 .error-container h1 { color: #dc143c; }
+.error-403 .error-container h2 { color: #cd5c5c; }
+.error-403 .home-link { background-color: #dc143c; }
+.error-403 .home-link:hover { background-color: #b22222; }
+
+.error-404 { background-color: #ffe6f0; }
+.error-404 .error-container h1 { color: #ff1493; }
+.error-404 .error-container h2 { color: #cc3366; }
+.error-404 .home-link { background-color: #ff1493; }
+.error-404 .home-link:hover { background-color: #ff69b4; }
+
+.error-500 { background-color: #f0f0f0; }
+.error-500 .error-container h1 { color: #ff6347; }
+.error-500 .error-container h2 { color: #555; }
+.error-500 .home-link { background-color: #ff6347; }
+.error-500 .home-link:hover { background-color: #ff4500; }
+
+.error-502 { background-color: #f5f5f5; }
+.error-502 .error-container h1 { color: #ffa500; }
+.error-502 .error-container h2 { color: #ff8c00; }
+.error-502 .home-link { background-color: #ffa500; }
+.error-502 .home-link:hover { background-color: #ff7f50; }
+
+.error-503 { background-color: #f5f5dc; }
+.error-503 .error-container h1 { color: #8b4513; }
+.error-503 .error-container h2 { color: #a0522d; }
+.error-503 .home-link { background-color: #8b4513; }
+.error-503 .home-link:hover { background-color: #a0522d; }
+
+.error-504 { background-color: #f0fff0; }
+.error-504 .error-container h1 { color: #32cd32; }
+.error-504 .error-container h2 { color: #228b22; }
+.error-504 .home-link { background-color: #32cd32; }
+.error-504 .home-link:hover { background-color: #2e8b57; }
