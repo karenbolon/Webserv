@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/19 07:11:37 by kellen            #+#    #+#             */
-/*   Updated: 2025/06/12 03:30:53 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/12 23:09:27 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -161,7 +161,7 @@ void Request::parseHeaders(const std::string& headerBlock) {
 			value = value.substr(start);
 
 		for (size_t i = 0; i < key.size(); ++i)
-			key[i] = std::tolower(key[i]);
+			key[i] = std::tolower(static_cast<unsigned char>(key[i]));
 
 		_headers[key] = value;
 	}

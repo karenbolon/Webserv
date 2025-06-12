@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/12 04:04:48 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/12 23:10:34 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -135,7 +135,11 @@ void handleExistingClient(int fd, std::vector<pollfd> &fds,
 
 	try {
 		// Read data from client
-		client->recvFullRequest(fd, config);
+		int bytes = client->recvFullRequest(fd, config);
+		if (bytes <= 0) {
+			handleClientCleanup(fd, fds, clients, i);
+			return;
+		}
 
 		// Check if request is complete
 		if (!client->isRequestComplete()) {

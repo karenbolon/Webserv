@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/06/12 17:09:02 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/12 21:27:00 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 
 void handleGet(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
 	std::cout << "📥 Handling GET request for " << path << std::endl;
+
 
 	// Check if path is a directory and autoindex is enabled
 	std::string fullPath = location.root + path;
@@ -281,6 +282,8 @@ std::string generateSimpleDirectoryListing(const std::string& dirPath, const std
 }
 
 std::string rewriteURL(const std::string& path, const ServerConfig& config, const std::string& method) {
+	std::cout << "🔄 Rewriting URL: " << path << " with method: " << method << std::endl;
+
 	// Handle root path
 	if (path == "/") {
 		return "/" + config.index;
@@ -383,6 +386,7 @@ void handleSimpleUpload(const std::string& request, int client_fd, const ServerC
 	// Step 5: Send success response
 	std::string successResponse = loadAndProcessSuccessTemplate(config, filename);
 	sendHtmlResponse(client_fd, 200, successResponse);
+	
 	std::cout << "📤 Success response sent!" << std::endl;
 }
 

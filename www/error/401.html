@@ -13,7 +13,17 @@
 		<div class="emoji">🔒</div>
 		<h1>Unauthorized/Unauthenticated</h1>
 		<p>the request has not been applied because it lacks valid authentication credentials for the target resource</p>
-		<a href="/" class="home-link">Go Home</a>
+		<div class="actions">
+			<a href="javascript:history.back()" class="home-link secondary">← Go Back</a>
+			<a href="/" class="home-link primary" onclick="goHome(event)">🏠 Go Home</a>
+		</div>
 	</div>
+
+	<script>
+		function goHome(event) {
+			event.preventDefault();
+			window.location.href = '/';
+		}
+	</script>
 </body>
 </html>

@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/12 17:41:51 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/12 22:53:41 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@ int	safe_socket(int domain, int type, int protocol) {
 	int	fd = socket(domain, type, protocol);
 	if (fd == -1) {
 		std::cerr << "Failed to create socket: " << std::strerror(errno) << std::endl;
-		return 1;
+		return -1;
 	}
 	return fd;
 }
@@ -102,6 +102,9 @@ void	shutDownWebserv(std::vector<ServerSocket*>& serverSockets, std::map<int, Cl
 }
 
 void serveStaticFile(std::string path, int client_fd, const ServerConfig &config) {
+	// Check if the path is empty or just a slash, then use the index file
+	std::cout << "🗂️ Serving static file: fullPath = '" << path << "'" << std::endl;
+
 	if (path.empty() || path == "/")
 		path = "/" + config.index;
 	std::string fullPath = config.root + path;

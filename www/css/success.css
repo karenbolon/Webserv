@@ -28,6 +28,7 @@ body.success-page {
 	right: -50%;
 	width: 200%;
 	height: 200%;
+	pointer-events: none;
 	background: radial-gradient(circle, rgba(255, 192, 203, 0.1) 0%, transparent 70%);
 	animation: float 6s ease-in-out infinite;
 }
@@ -86,13 +87,6 @@ h1 {
 	font-weight: bold;
 }
 
-.actions {
-	display: flex;
-	gap: 15px;
-	justify-content: center;
-	flex-wrap: wrap;
-}
-
 .btn {
 	padding: 12px 30px;
 	border: none;
@@ -102,27 +96,6 @@ h1 {
 	text-decoration: none;
 	display: inline-block;
 	transition: all 0.3s ease;
-}
-
-.btn-primary {
-	background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
-	color: white;
-}
-
-.btn-primary:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
-}
-
-.btn-secondary {
-	background: white;
-	color: #ff1493;
-	border: 2px solid #ff1493;
-}
-
-.btn-secondary:hover {
-	background: #ff1493;
-	color: white;
 }
 
 .sparkles {

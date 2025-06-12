@@ -221,11 +221,51 @@ h2 {
 }
 
 .footer {
-	text-align: center;
-	bottom: 30px;
-	right: 700px;
-	position: fixed;
+	margin-top: auto;
+	position: flex;
+	left: 50%;
+	bottom: 10px;
+	/* transform: translateX(-50%); */
 	padding: 20px;
+	text-align: center;
 	color: #8e44ad;
 	font-size: 14px;
+}
+
+/* redirections actions */
+.actions {
+	display: flex;
+	gap: 15px;
+	justify-content: center;
+	margin-top: 30px;
+	flex-wrap: wrap;
+}
+
+.home-link.primary {
+	display: inline-block;
+	margin-top: 30px;
+	padding: 12px 30px;
+	background-color: #ff1493;
+	color: white;
+	text-decoration: none;
+	border-radius: 25px;
+	transition: background-color 0.3s;
+}
+
+.home-link.primary:hover {
+	background-color: #cc3366;
+}
+.home-link.secondary {
+	display: inline-block;
+	margin-top: 30px;
+	padding: 12px 30px;
+	background-color: #ff1493;
+	color: white;
+	text-decoration: none;
+	border-radius: 25px;
+	transition: background-color 0.3s;
+}
+
+.home-link.secondary:hover {
+	background-color: #cc3366;
 }

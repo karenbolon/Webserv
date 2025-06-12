@@ -42,21 +42,6 @@ body.error-page {
 	margin: 20px 0;
 }
 
-.home-link {
-	display: inline-block;
-	margin-top: 30px;
-	padding: 12px 30px;
-	background-color: #ff1493;
-	color: white;
-	text-decoration: none;
-	border-radius: 25px;
-	transition: background-color 0.3s;
-}
-
-.home-link:hover {
-	background-color: #cc3366;
-}
-
 /* Error-specific colors */
 .error-400 { background-color: #fff0f5; }
 .error-400 .error-container h1 { color: #ff69b4; }

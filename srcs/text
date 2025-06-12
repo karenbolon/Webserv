@@ -155,4 +155,34 @@ This will show:
 - "uploaded Successful!" and "has been uploaded successfully!" for uploads
 - "deleted Successful!" and "has been deleted successfully!" for deletions
 */
+
+
+/*
+.error-actions {
+			display: flex;
+			gap: 15px;
+			justify-content: center;
+			margin-top: 30px;
+			flex-wrap: wrap;
+		}
+
+		.home-link.secondary {
+			background-color: transparent;
+			color: #ff1493;
+			border: 2px solid #ff1493;
+		}
+
+		.home-link.secondary:hover {
+			background-color: #ff1493;
+			color: white;
+		}
+
+		.home-link.primary {
+			background-color: #ff1493;
+			color: white;
+		}
+
+		.home-link.primary:hover {
+			background-color: #cc3366;
+		}
 */

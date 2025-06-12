@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Upload Successful!</title>
-	<link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="/style.css">
 	<link rel="stylesheet" href="/css/success.css">
 </head>
 <body>
@@ -21,9 +21,22 @@
 		<div class="file-name">{{filename}}</div>
 
 		<div class="actions">
-			<a href="/upload" class="btn btn-primary">Upload Another</a>
-			<a href="/" class="btn btn-secondary">Go Home</a>
+			<a href="/upload.html" class="home-link secondary" onclick="goToUpload(event)">Upload Another</a>
+			<a href="/" class="home-link primary" onclick="goHome(event)">Go Home</a>
 		</div>
 	</div>
+
+	<script>
+		// Simple navigation functions
+		function goHome(event) {
+			event.preventDefault();
+			window.location.href = '/';
+		}
+
+		function goToUpload(event) {
+			event.preventDefault();
+			window.location.href = '/upload.html';
+		}
+	</script>
 </body>
 </html>
