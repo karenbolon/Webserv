@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/06/12 04:02:19 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/12 17:16:08 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,7 +116,8 @@ bool		validateUploadFileSize(size_t fileSize, const ServerConfig& config);
 bool		writeFileToServer(const std::string& request, size_t contentStart, size_t contentLength,
 					const std::string& filePath);
 std::string	loadAndProcessSuccessTemplate(const ServerConfig& config, const std::string& filename);
-void		replaceTemplateVariables(std::string& templateContent, const std::string& filename);
+std::string	loadAndProcessDeleteTemplate(const ServerConfig& config, const std::string& filename);
+void		replaceTemplateVariables(std::string& templateContent, const std::string& filename, const std::string& action);
 std::string	extractBoundary(const std::string& request);
 
 #endif // WEBSERV_HPP

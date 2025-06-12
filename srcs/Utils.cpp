@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 03:08:22 by kellen            #+#    #+#             */
-/*   Updated: 2025/06/12 03:56:33 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/12 17:23:01 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -162,8 +162,8 @@ std::string loadAndProcessSuccessTemplate(const ServerConfig& config, const std:
 							std::istreambuf_iterator<char>());
 		successFile.close();
 
-		// Process template variables
-		replaceTemplateVariables(templateContent, filename);
+		// Process template with "uploaded" action
+		replaceTemplateVariables(templateContent, filename, "uploaded");
 
 	} else {
 		std::cout << "⚠️ Success template not found at: " << successPath << std::endl;
@@ -186,14 +186,50 @@ std::string loadAndProcessSuccessTemplate(const ServerConfig& config, const std:
 	return templateContent;
 }
 
+// For deletions (add this new function):
+std::string loadAndProcessDeleteTemplate(const ServerConfig& config, const std::string& filename) {
+	std::string successPath = config.root + "/templates/success.html";
+	std::ifstream successFile(successPath.c_str());
+	std::string templateContent;
+
+	if (successFile.is_open()) {
+		std::cout << "✅ Loading success template for deletion from: " << successPath << std::endl;
+
+		templateContent.assign((std::istreambuf_iterator<char>(successFile)),
+							std::istreambuf_iterator<char>());
+		successFile.close();
+
+		// Process template with "deleted" action
+		replaceTemplateVariables(templateContent, filename, "deleted");
+
+	} else {
+		std::cout << "⚠️ Success template not found, using fallback for deletion" << std::endl;
+
+		std::ostringstream fallback;
+		fallback << "<!DOCTYPE html>\n";
+		fallback << "<html><head><title>File Deleted</title>";
+		fallback << "<link rel=\"stylesheet\" href=\"/style.css\"></head>\n";
+		fallback << "<body><div class=\"container text-center\">\n";
+		fallback << "<h1>🗑️ File Deleted Successfully!</h1>\n";
+		fallback << "<p>File <strong>" << filename << "</strong> has been deleted.</p>\n";
+		fallback << "<div class=\"nav-buttons\">";
+		fallback << "<a href=\"/upload\" class=\"nav-btn\">📸 Upload New File</a> ";
+		fallback << "<a href=\"/\" class=\"nav-btn\">🏠 Go Home</a>";
+		fallback << "</div></div></body></html>\n";
+		templateContent = fallback.str();
+	}
+
+	return templateContent;
+}
+
 /**
  * Replace template variables like {{action}} and {{filename}}
  */
-void replaceTemplateVariables(std::string& templateContent, const std::string& filename) {
+void replaceTemplateVariables(std::string& templateContent, const std::string& filename, const std::string& action) {
 	// Replace {{action}} with "uploaded"
 	size_t pos = 0;
 	while ((pos = templateContent.find("{{action}}", pos)) != std::string::npos) {
-		templateContent.replace(pos, 10, "uploaded");
+		templateContent.replace(pos, 10, action);
 		pos += 8; // length of "uploaded"
 	}
 

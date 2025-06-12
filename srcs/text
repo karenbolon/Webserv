@@ -119,57 +119,6 @@ std::string loadAndProcessDeleteTemplate(const ServerConfig& config, const std::
     return templateContent;
 }
 
-// ============================================================================
-// UPDATE YOUR DELETE HANDLER TO USE THE TEMPLATE
-// ============================================================================
-
-void handleDelete(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
-    std::cout << "🗑️ Handling DELETE request for " << path << std::endl;
-
-    // Extract filename from path
-    std::string filename = path;
-    if (filename.find_last_of('/') != std::string::npos) {
-        filename = filename.substr(filename.find_last_of('/') + 1);
-    }
-
-    // Construct full file path
-    std::string uploadPath = location.upload_path;
-    if (uploadPath.empty()) {
-        uploadPath = "www/upload";
-    }
-
-    std::string fullPath = uploadPath + "/" + filename;
-
-    // Validate file path (security check)
-    if (filename.find("..") != std::string::npos || filename.find("/") != std::string::npos) {
-        std::cout << "❌ Invalid filename in DELETE request: " << filename << std::endl;
-        std::string body = getErrorPageBody(400, config);
-        sendHtmlResponse(fd, 400, body);
-        return;
-    }
-
-    // Check if file exists
-    if (!fileExists(fullPath)) {
-        std::cout << "❌ File not found for deletion: " << fullPath << std::endl;
-        std::string body = getErrorPageBody(404, config);
-        sendHtmlResponse(fd, 404, body);
-        return;
-    }
-
-    // Delete the file
-    if (std::remove(fullPath.c_str()) != 0) {
-        std::cout << "❌ Failed to delete file: " << fullPath << std::endl;
-        std::string body = getErrorPageBody(500, config);
-        sendHtmlResponse(fd, 500, body);
-        return;
-    }
-
-    std::cout << "✅ File deleted: " << fullPath << std::endl;
-
-    // 🎯 USE THE TEMPLATE FOR DELETE SUCCESS
-    std::string successResponse = loadAndProcessDeleteTemplate(config, filename);
-    sendHtmlResponse(fd, 200, successResponse);
-}
 
 // ============================================================================
 // USAGE EXAMPLES

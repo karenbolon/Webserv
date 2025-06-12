@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 14:24:24 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/12 00:37:22 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/12 17:55:48 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,7 @@ const std::map<int, std::string>& HttpStatus::statusMessages() {
 		statusList[403] = "Forbidden";
 		statusList[404] = "Not Found";
 		statusList[405] = "Method Not Allowed";
+		statusList[409] = "Conflict";
 		statusList[413] = "Payload Too Large";
 		statusList[500] = "Internal Server Error";
 		statusList[501] = "Not Implemented";
