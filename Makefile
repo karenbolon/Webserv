@@ -18,7 +18,8 @@ NAME = webserv
 
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -I $(INC_DIR)
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98
+INCLUDES = -I include
 RM = rm -rf
 
 #                         Color and Checkmark Definitions                      #
@@ -69,7 +70,9 @@ SHARED = \
 	$(SRC_DIR)/Request.cpp \
 	$(SRC_DIR)/Response.cpp \
 	$(SRC_DIR)/CgiFunctions.cpp \
-	$(SRC_DIR)/HttpStatus.cpp
+	$(SRC_DIR)/HttpStatus.cpp \
+	$(SRC_DIR)/Method.cpp \
+	$(SRC_DIR)/Utils.cpp
 
 SRCS = 	$(SRC_DIR)/WebServ.cpp \
 		$(SHARED)
@@ -105,16 +108,16 @@ Start :
 
 $(NAME): $(OBJS)
 	$(call print_status,"Creating WebServ...")
-	@$(CXX) $(CXXFLAGS) -o $@ $^ > /dev/null
+	@$(CXX) $(INCLUDES) $(CXXFLAGS) -o $@ $^ > /dev/null
 	@echo "${CHECK} Compiling utilities! ${RT}"
 
 create_obj_dir:
 	@mkdir -p $(OBJ_DIR)
 	@echo "${CHECK} Object directory created!"
-	
+
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | create_obj_dir
 	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) -c $< -o $@ > /dev/null
+	@$(CXX) $(INCLUDES) $(CXXFLAGS) -c $< -o $@ > /dev/null
 
 TEST_BINARIES = $(TEST_SRC:.cpp=)
 TEST_FULL_BIN = $(TEST_FULL:.cpp=)
@@ -123,7 +126,7 @@ test: $(TEST_BINARIES)
 
 $(TEST_DIR)/%: $(TEST_DIR)/%.cpp $(SHARED)
 	@echo "Compiling $@..."
-	@$(CXX) $(CXXFLAGS) -I $(INC_DIR) -o $@ $^
+	@$(CXX) $(INCLUDES) $(CXXFLAGS) -o $@ $^
 	@echo "${PINK}Test...${RT}";
 	@echo "${CHECK} successfully compiled! 📚$(RT)";
 

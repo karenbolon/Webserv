@@ -3,22 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   helperFunction.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/11 16:31:55 by keramos-         ###   ########.fr       */
+/*   Updated: 2025/06/12 00:37:17 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/WebServ.hpp"
-#include "../include/ServerConfig.hpp"
-#include "../include/HttpStatus.hpp"
-#include "../include/Response.hpp"
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <cstring>
-#include <cerrno>
-#include <iostream>
+#include "WebServ.hpp"
 
 std::string	intToStr(int n) {
 	std::ostringstream oss;
@@ -357,4 +349,21 @@ LocationConfig matchLocation(const std::string& path, const ServerConfig& config
 		}
 	}
 	return bestMatch;
+}
+
+void handleClientCleanup(int fd, std::vector<pollfd>& fds,
+		std::map<int, ClientConnection*>& clients, size_t& i) {
+	// Remove from clients map
+	std::map<int, ClientConnection*>::iterator it = clients.find(fd);
+	if (it != clients.end()) {
+		delete it->second;
+		clients.erase(it);
+	}
+
+	// Close socket
+	close(fd);
+
+	// Remove from poll fds
+	fds.erase(fds.begin() + i);
+	--i;
 }

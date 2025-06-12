@@ -3,29 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   CgiFunctions.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/10 17:42:30 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 00:22:58 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/wait.h>
-#include <cstdlib>
-#include <cstring>
-#include <cerrno> //errno
-#include <iostream>
-#include <vector>
-#include <sstream>
-#include <map>
-#include <cstddef>
-#include <sys/socket.h>
-#include "../include/Request.hpp"
-#include "../include/ServerConfig.hpp"
-#include "../include/HttpStatus.hpp"
-#include "../include/WebServ.hpp"
+#include "WebServ.hpp"
 
 /*
 find the script/language interpreter by lopping through all config.locations
@@ -105,7 +90,7 @@ void handleCgi(const Request req, int fd, const ServerConfig& config, std::strin
 		dup2(outputPipe[1], STDOUT_FILENO);
 		close(inputPipe[1]);
 		close(outputPipe[0]);
-		
+
 		//prepare list of executable paths (/usr/bin/python3) & script (/www.cgi-bin/script.py)
 		char* pathToInterpreterAndScript[] = {
 			const_cast<char*>(interpreter.c_str()),
@@ -119,7 +104,7 @@ void handleCgi(const Request req, int fd, const ServerConfig& config, std::strin
 		std::ostringstream oss;
 		oss << req.getBody().length();
 		std::string contentLengthStr = oss.str();
-		
+
 		//make "CGI headers but passed through execve() instead of HTTP stream"
 		//pre-set values or ENV variables the CGI uses when running the script
 		//must convert to string for execve
@@ -168,7 +153,7 @@ void handleCgi(const Request req, int fd, const ServerConfig& config, std::strin
 			body = body.substr(headerEnd + 4);
 		std::ostringstream fullResponse;
 		sendHtmlResponse(fd, 200, body);
-		
+
 		std::string responseStr = fullResponse.str();
 		if (responseStr.empty()) {
 			std::string errorBody = getErrorPageBody(500, config);
@@ -181,6 +166,5 @@ void handleCgi(const Request req, int fd, const ServerConfig& config, std::strin
 			std::cerr << "❌ CGI response was interrupted\n";
 		std::cout << "📤 CGI output:\n" << responseStr << std::endl;
 	}
-	
-}
 
+}

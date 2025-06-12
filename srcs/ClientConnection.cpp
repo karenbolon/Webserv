@@ -3,26 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/11 17:36:32 by keramos-         ###   ########.fr       */
+/*   Updated: 2025/06/12 00:36:47 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/ClientConnection.hpp"
-#include "../include/WebServ.hpp"
-#include <poll.h>
-#include <sys/stat.h>
-#include <iostream>
-#include <unistd.h> //close
-#include <cstring> //strerror
-#include <sys/socket.h> //internet protocol family
-#include <string>
-#include <vector>
-#include <stdint.h>
-#include <fstream>
-#include <fcntl.h>
+#include "WebServ.hpp"
 
 ClientConnection::ClientConnection(int fd) : _fd(fd) {
 	int flags = fcntl(_fd, F_GETFL, 0);

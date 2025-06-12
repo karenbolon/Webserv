@@ -3,16 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   ServerConfig.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:52 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/11 13:54:17 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 00:23:29 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/WebServ.hpp"
-#include <iostream>
-#include <ostream>
+#include "WebServ.hpp"
 
 ServerConfig::ServerConfig() : ports(0), client_max_body_size(0) {}
 
@@ -30,7 +28,7 @@ void	ServerConfig::print() const {
 
 	for (std::map<int, std::string>::const_iterator it = error_pages.begin(); it != error_pages.end(); ++it)
 		std::cout << "error_page " << it->first << " => " << it->second << std::endl;
-	
+
 	for (size_t i = 0; i < locations.size(); ++i)
 		locations[i].print();
 

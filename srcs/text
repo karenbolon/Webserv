@@ -1,0 +1,209 @@
+/*
+// ============================================================================
+// ENHANCED TEMPLATE PROCESSING WITH ACTION SUPPORT
+// ============================================================================
+
+// Update your file size validation:
+bool validateUploadFileSize(size_t fileSize, const ServerConfig& config) {
+    size_t maxSize = config.client_max_body_size;
+    if (maxSize == 0) {
+        // 100MB default (good for videos and large files)
+        maxSize = 100 * 1024 * 1024; // 100MB
+    }
+
+    if (fileSize > maxSize) {
+        std::cout << "⚠️ File size " << fileSize << " exceeds limit " << maxSize << std::endl;
+        std::cout << "📊 File size: " << (fileSize / 1024 / 1024) << "MB, Limit: " << (maxSize / 1024 / 1024) << "MB" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+// ============================================================================
+// ENHANCED TEMPLATE VARIABLE REPLACEMENT
+// ============================================================================
+
+// Option 1: Enhanced function with action parameter
+void replaceTemplateVariables(std::string& templateContent, const std::string& filename, const std::string& action = "uploaded") {
+    // Replace {{action}} with the specified action ("uploaded" or "deleted")
+    size_t pos = 0;
+    while ((pos = templateContent.find("{{action}}", pos)) != std::string::npos) {
+        templateContent.replace(pos, 10, action);
+        pos += action.length();
+    }
+
+    // Replace {{filename}} with actual filename
+    pos = 0;
+    while ((pos = templateContent.find("{{filename}}", pos)) != std::string::npos) {
+        templateContent.replace(pos, 12, filename);
+        pos += filename.length();
+    }
+
+    std::cout << "✅ Template variables processed (action: " << action << ", filename: " << filename << ")" << std::endl;
+}
+
+// ============================================================================
+// UPDATE YOUR LOAD TEMPLATE FUNCTIONS
+// ============================================================================
+
+// For uploads:
+std::string loadAndProcessSuccessTemplate(const ServerConfig& config, const std::string& filename) {
+    std::string successPath = config.root + "/templates/success.html";
+    std::ifstream successFile(successPath.c_str());
+    std::string templateContent;
+
+    if (successFile.is_open()) {
+        std::cout << "✅ Loading success template from: " << successPath << std::endl;
+
+        templateContent.assign((std::istreambuf_iterator<char>(successFile)),
+                              std::istreambuf_iterator<char>());
+        successFile.close();
+
+        // Process template with "uploaded" action
+        replaceTemplateVariables(templateContent, filename, "uploaded");
+
+    } else {
+        std::cout << "⚠️ Success template not found at: " << successPath << std::endl;
+
+        std::ostringstream fallback;
+        fallback << "<!DOCTYPE html>\n";
+        fallback << "<html><head><title>Upload Successful</title>";
+        fallback << "<link rel=\"stylesheet\" href=\"/style.css\"></head>\n";
+        fallback << "<body><div class=\"container text-center\">\n";
+        fallback << "<h1>✅ Upload Successful!</h1>\n";
+        fallback << "<p>File <strong>" << filename << "</strong> uploaded successfully.</p>\n";
+        fallback << "<div class=\"nav-buttons\">";
+        fallback << "<a href=\"/upload\" class=\"nav-btn\">📸 Upload Another</a> ";
+        fallback << "<a href=\"/\" class=\"nav-btn\">🏠 Go Home</a>";
+        fallback << "</div></div></body></html>\n";
+        templateContent = fallback.str();
+    }
+
+    return templateContent;
+}
+
+// For deletions (add this new function):
+std::string loadAndProcessDeleteTemplate(const ServerConfig& config, const std::string& filename) {
+    std::string successPath = config.root + "/templates/success.html";
+    std::ifstream successFile(successPath.c_str());
+    std::string templateContent;
+
+    if (successFile.is_open()) {
+        std::cout << "✅ Loading success template for deletion from: " << successPath << std::endl;
+
+        templateContent.assign((std::istreambuf_iterator<char>(successFile)),
+                              std::istreambuf_iterator<char>());
+        successFile.close();
+
+        // Process template with "deleted" action
+        replaceTemplateVariables(templateContent, filename, "deleted");
+
+    } else {
+        std::cout << "⚠️ Success template not found, using fallback for deletion" << std::endl;
+
+        std::ostringstream fallback;
+        fallback << "<!DOCTYPE html>\n";
+        fallback << "<html><head><title>File Deleted</title>";
+        fallback << "<link rel=\"stylesheet\" href=\"/style.css\"></head>\n";
+        fallback << "<body><div class=\"container text-center\">\n";
+        fallback << "<h1>🗑️ File Deleted Successfully!</h1>\n";
+        fallback << "<p>File <strong>" << filename << "</strong> has been deleted.</p>\n";
+        fallback << "<div class=\"nav-buttons\">";
+        fallback << "<a href=\"/upload\" class=\"nav-btn\">📸 Upload New File</a> ";
+        fallback << "<a href=\"/\" class=\"nav-btn\">🏠 Go Home</a>";
+        fallback << "</div></div></body></html>\n";
+        templateContent = fallback.str();
+    }
+
+    return templateContent;
+}
+
+// ============================================================================
+// UPDATE YOUR DELETE HANDLER TO USE THE TEMPLATE
+// ============================================================================
+
+void handleDelete(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+    std::cout << "🗑️ Handling DELETE request for " << path << std::endl;
+
+    // Extract filename from path
+    std::string filename = path;
+    if (filename.find_last_of('/') != std::string::npos) {
+        filename = filename.substr(filename.find_last_of('/') + 1);
+    }
+
+    // Construct full file path
+    std::string uploadPath = location.upload_path;
+    if (uploadPath.empty()) {
+        uploadPath = "www/upload";
+    }
+
+    std::string fullPath = uploadPath + "/" + filename;
+
+    // Validate file path (security check)
+    if (filename.find("..") != std::string::npos || filename.find("/") != std::string::npos) {
+        std::cout << "❌ Invalid filename in DELETE request: " << filename << std::endl;
+        std::string body = getErrorPageBody(400, config);
+        sendHtmlResponse(fd, 400, body);
+        return;
+    }
+
+    // Check if file exists
+    if (!fileExists(fullPath)) {
+        std::cout << "❌ File not found for deletion: " << fullPath << std::endl;
+        std::string body = getErrorPageBody(404, config);
+        sendHtmlResponse(fd, 404, body);
+        return;
+    }
+
+    // Delete the file
+    if (std::remove(fullPath.c_str()) != 0) {
+        std::cout << "❌ Failed to delete file: " << fullPath << std::endl;
+        std::string body = getErrorPageBody(500, config);
+        sendHtmlResponse(fd, 500, body);
+        return;
+    }
+
+    std::cout << "✅ File deleted: " << fullPath << std::endl;
+
+    // 🎯 USE THE TEMPLATE FOR DELETE SUCCESS
+    std::string successResponse = loadAndProcessDeleteTemplate(config, filename);
+    sendHtmlResponse(fd, 200, successResponse);
+}
+
+// ============================================================================
+// USAGE EXAMPLES
+// ============================================================================
+
+/*
+Now your success.html template can handle both cases:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{action}} Successful!</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container text-center">
+        <h1>
+            <span class="sparkle sparkle-1">✨</span>
+            {{action}} Successful! 🎉
+            <span class="sparkle sparkle-2">✨</span>
+        </h1>
+        <p>Your file <strong>{{filename}}</strong> has been {{action}} successfully!</p>
+
+        <div class="nav-buttons">
+            <a href="/upload" class="nav-btn">📸 Upload Another</a>
+            <a href="/" class="nav-btn">🏠 Go Home</a>
+        </div>
+    </div>
+</body>
+</html>
+
+This will show:
+- "uploaded Successful!" and "has been uploaded successfully!" for uploads
+- "deleted Successful!" and "has been deleted successfully!" for deletions
+*/
+*/

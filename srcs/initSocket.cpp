@@ -3,14 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   initSocket.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/10 18:20:33 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 04:04:48 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/WebServ.hpp"
+#include "WebServ.hpp"
 
 /*
 This function takes the groups of Servers, Sockets etc
@@ -50,9 +50,9 @@ bool initialiseSockets(const std::vector<ServerConfig>& servers, std::vector<Ser
 /*
 this is the main I/O loop with poll()
 */
-void	runEventLoop(	std::vector<struct pollfd>& fds, 
+void	runEventLoop(	std::vector<struct pollfd>& fds,
 						std::map<int, ServerSocket*>& fdToSocket,
-						std::map<int, ClientConnection*>& clients, 
+						std::map<int, ClientConnection*>& clients,
 						std::map<int, ServerSocket*>& clientToServer) {
 
 	while (g_signal != 0) {
@@ -70,7 +70,7 @@ void	runEventLoop(	std::vector<struct pollfd>& fds,
 			//revents field is declared as a short
 			short tempRevent = fds[i].revents;
 			int fd = fds[i].fd;
-			
+
 			if (tempRevent & (POLLERR | POLLHUP | POLLNVAL)) {
 				std::cerr << "❌ Error or hangup on client side\n" << fd << std::endl;
 				close(fd);
@@ -120,60 +120,108 @@ This function finds the corresponding file descriptor in the ClientConnection ma
 parses and handles the HTTP request using the appropriate handler (static, CGI, or upload),
 and then cleans up the client connection.
 */
-void	handleExistingClient(int fd, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, size_t& i, const ServerConfig& config) {
-	//finds the FD in the ClientConnection container
-	std::map<int, ClientConnection*>::iterator it = clients.find(fd);
-	// Defensive check: poll gave us a fd we don't know? Exit function.
-	if (it == clients.end()) {
-		std::cerr << "❌ Received an event for an unknown fd: " << fd << std::endl;
-		return;
-	}
-	ClientConnection* client = it->second;
-	//Step 1: read data from client
-	client->recvFullRequest(fd, config);
-	//Step 2: Wait for all data to be received
-	if (!client->isRequestComplete())
-		return;
-	
-	std::string request = client->getRawRequest();
-	//parset the HTTP item into a Request object & extract methods and path
+void handleExistingClient(int fd, std::vector<pollfd> &fds,
+	std::map<int, ClientConnection*>& clients, size_t& i,
+	const ServerConfig& config)
+{
 
-	Request	req(request);
-	std::string method = req.getMethod();
-	std::string path = req.getPath();
-	std::string interpreter;
-	
-	std::cout << "📨 " << method << " " << path << std::endl;
-	LocationConfig	location = matchLocation(path, config);
-	
-	//return error page if specified in location block
-	if (location.returnStatusCode != 0) {
-		std::string body = getErrorPageBody(location.returnStatusCode, config);
-		sendHtmlResponse(fd, location.returnStatusCode, body);
-		goto cleanup;
+	std::map<int, ClientConnection*>::iterator it = clients.find(fd);
+	if (it == clients.end()) {
+		std::cerr << "❌ Unknown client fd: " << fd << std::endl;
+		return;
 	}
-	//handle uploads
-	if (method == "POST" && path == "/upload") {
-		std::cout << "handling upload\n" << std::endl;
-		//handle file uploads
-		handleUpload(request, fd, config);
-		goto cleanup;
+
+	ClientConnection* client = it->second;
+
+	try {
+		// Read data from client
+		client->recvFullRequest(fd, config);
+
+		// Check if request is complete
+		if (!client->isRequestComplete()) {
+			return; // Wait for more data
+		}
+
+		std::string request = client->getRawRequest();
+		if (request.empty()) {
+			std::cout << "⚠️ Empty request received" << std::endl;
+			handleClientCleanup(fd, fds, clients, i);
+			return;
+		}
+
+		// Parse request
+		Request req(request);
+		std::string method = req.getMethod();
+		std::string path = req.getPath();
+
+		std::cout << "📨 " << method << " " << path << std::endl;
+
+		// URL rewriting for clean URLs - BUT NOT FOR POST UPLOADS
+		std::string actualPath = path;
+		if (method == "GET") {
+			actualPath = rewriteURL(path, config, method);
+			if (actualPath != path) {
+				std::cout << "🔄 URL rewrite: " << path << " → " << actualPath << std::endl;
+				path = actualPath;
+			}
+		} else {
+			// For POST, PUT, DELETE - keep original path
+			std::cout << "📌 Keeping original path for " << method << ": " << path << std::endl;
+		}
+		// std::string actualPath = rewriteURL(path, config);
+		// if (actualPath != path) {
+		// 	std::cout << "🔄 URL rewrite: " << path << " → " << actualPath << std::endl;
+		// 	path = actualPath;
+		// }
+
+		// Find matching location
+		LocationConfig location = matchLocation(path, config);
+
+		// Check if method is allowed in this location
+		bool methodAllowed = false;
+		for (size_t j = 0; j < location.methods.size(); ++j) {
+			if (location.methods[j] == method) {
+				methodAllowed = true;
+				break;
+			}
+		}
+
+		if (!methodAllowed) {
+			std::cout << "❌ Method " << method << " not allowed for " << path << std::endl;
+			std::string body = getErrorPageBody(405, config); // Method Not Allowed
+			sendHtmlResponse(fd, 405, body);
+			handleClientCleanup(fd, fds, clients, i);
+			return;
+		}
+
+		// Handle different HTTP methods with CORRECT parameter order
+		if (method == "GET") {
+			// handleGET(fd, path, location, config)
+			handleGet(fd, path, location, config);
+		} else if (method == "POST") {
+			// handlePOST(fd, req, path, location, config)
+			handlePost(fd, req, path, location, config);
+		} else if (method == "PUT") {
+			// handlePUT(fd, req, path, location, config)
+			handlePut(fd, req, path, location, config);
+		} else if (method == "DELETE") {
+			// handleDELETE(fd, path, location, config)
+			handleDelete(fd, path, location, config);
+		} else if (method == "HEAD") {
+			// handleHEAD(fd, path, location, config)
+			handleHead(fd, path, location, config);
+		} else {
+			std::cout << "❌ Method " << method << " not implemented" << std::endl;
+			std::string body = getErrorPageBody(501, config); // Not Implemented
+			sendHtmlResponse(fd, 501, body);
+		}
+
+	} catch (const std::exception& e) {
+		std::cerr << "❌ Exception handling client " << fd << ": " << e.what() << std::endl;
+		std::string errorBody = getErrorPageBody(500, config);
+		sendHtmlResponse(fd, 500, errorBody);
 	}
-	//check for CGI interpreter (.py, .php, etc.)
-	interpreter = getInterpreter(path, config);
-	if (!interpreter.empty()) {
-		//if CGI, run it
-		handleCgi(req, fd, config, interpreter);
-		goto cleanup;
-	}
-	//default: serve static
-	serveStaticFile(path, fd, config);
-	std::cout << "🧪 getPath: " << req.getPath() << "\n";
-	std::cout << "🧪 getQuery: " << req.getQuery() << "\n";
-	cleanup:
-		close(fd);
-		delete client;
-		clients.erase(it);
-		fds.erase(fds.begin() + i);
-		--i;
+
+	// Clean up client connection
+	handleClientCleanup(fd, fds, clients, i);
 }

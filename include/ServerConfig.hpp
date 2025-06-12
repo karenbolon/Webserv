@@ -3,20 +3,21 @@
 /*                                                        :::      ::::::::   */
 /*   ServerConfig.hpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:17 by kbolon            #+#    #+#             */
-/*   Updated: 2025/05/27 11:06:44 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 00:24:15 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#pragma once
+#ifndef SERVERCONFIG_HPP
+#define SERVERCONFIG_HPP
 
-#include "LocationConfig.hpp"
 #include <string>
 #include <vector>
 #include <map>
 
+class LocationConfig;
 struct	ServerConfig {
 		//raw is for testing, ensure we process everything (remove before finishing)
 	std::map<std::string, std::string> raw; //stores unprocessed directives
@@ -29,7 +30,7 @@ struct	ServerConfig {
 	long						client_max_body_size;
 	std::map<int, std::string>	error_pages; //error code and path
 	std::vector<LocationConfig>	locations; //location blocks
-	
+
 	ServerConfig();
 
 	void	print() const;
@@ -37,3 +38,5 @@ struct	ServerConfig {
 };
 
 void		applyDefaults(ServerConfig& server);
+
+#endif // SERVERCONFIG_HPP

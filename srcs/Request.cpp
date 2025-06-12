@@ -3,16 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   Request.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/19 07:11:37 by kellen            #+#    #+#             */
-/*   Updated: 2025/06/10 18:34:15 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 03:30:53 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/Request.hpp"
-#include <string>
-#include <sstream>
+#include "WebServ.hpp"
 
 /*
 * Constructor that parses the raw HTTP request.
@@ -121,7 +119,7 @@ void Request::parse(const std::string& raw) {
 			continue;
 		std::string key = line.substr(0, colon);
 		std::string value = line.substr(colon + 1);
-		
+
 		//trim leading white space in value
 		size_t start = value.find_first_not_of(" \t");
 		if (start != std::string::npos)
@@ -132,7 +130,7 @@ void Request::parse(const std::string& raw) {
 			key[i] = std::tolower(key[i]);
 		_headers[key] = value;
 	}
-	//extract path and query for CGI 
+	//extract path and query for CGI
 	size_t token = _target.find('?');
 	if (token != std::string::npos) {
 		_path = _target.substr(0, token);
@@ -173,3 +171,6 @@ const std::map<std::string, std::string>& Request::getHeaders() const {
 	return _headers;
 }
 
+std::string Request::getRawRequest() const {
+	return _raw;
+}

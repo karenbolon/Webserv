@@ -3,24 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   ServerSocket.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:37 by kbolon            #+#    #+#             */
-/*   Updated: 2025/05/21 14:19:55 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 00:36:34 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/ServerSocket.hpp"
-#include <iostream>
-#include <unistd.h> //close
-#include <cstring> //strerror
-#include <cerrno> //errno
-#include <stdexcept> //std::runtime_error
-#include <netinet/in.h>
-#include <sys/socket.h> //internet protocol family
-#include <arpa/inet.h>
-#include <netdb.h>
-
+#include "WebServ.hpp"
 
 ServerSocket::ServerSocket() : _fd(-1) {}
 
@@ -41,7 +31,7 @@ bool checkHost(const std::string& host, in_addr& addr) {
 	struct hostent* he = gethostbyname(host.c_str());
 	if (!he || he->h_addrtype != AF_INET)
 		return false;
-	
+
 	//if everything ok, it copies the address
 	std::memcpy(&addr, he->h_addr_list[0], sizeof(struct in_addr));
 	return true;
@@ -72,7 +62,7 @@ bool	ServerSocket::init(int port, const std::string& host) {
 	}
 	//fills socket address struct
 	sockaddr_in serverAddress;
-	serverAddress.sin_family = AF_INET;	
+	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_port = htons(port);
 	in_addr	addr; //if valid, it is filled thru checkHost
 	if (!checkHost(host, addr)) {

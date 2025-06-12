@@ -3,19 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   ConfigParser.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:20:05 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/10 13:12:11 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 00:39:15 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/ConfigParser.hpp"
-#include "../include/WebServ.hpp"
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cstdlib>
+#include "WebServ.hpp"
 
 ConfigParser::ConfigParser() {}
 
@@ -60,7 +55,7 @@ void	ConfigParser::parseFile(const std::string& path) {
 			continue;
 		}
 		else if (line.find("server") == 0)
-			error("Couldn't read server block\n");	
+			error("Couldn't read server block\n");
 	}
 }
 
@@ -176,7 +171,7 @@ void	ConfigParser::parseServerDirective(ServerConfig& server, const std::string&
 	else if (key == "host")
 		server.host = value;
 	else if (key == "server_name")
-		server.server_name = value; 
+		server.server_name = value;
 	else if (key == "root")
 		server.root = value;
 	else if (key == "index")

@@ -3,14 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   HttpStatus.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 14:24:24 by kbolon            #+#    #+#             */
-/*   Updated: 2025/05/21 18:07:54 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 00:37:22 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/HttpStatus.hpp"
+#include "WebServ.hpp"
 
 const std::map<int, std::string>& HttpStatus::statusMessages() {
 	static std::map<int, std::string> statusList;

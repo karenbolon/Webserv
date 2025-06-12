@@ -3,15 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   inputValidation.cpp                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 11:14:38 by kbolon            #+#    #+#             */
-/*   Updated: 2025/05/21 14:19:40 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 00:37:34 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/WebServ.hpp"
-#include <set>
+#include "WebServ.hpp"
 
 /*
 This function validates the raw port string, checks if it is
@@ -81,7 +80,7 @@ This function parses through all of the servers listed to check for duplicate pa
 */
 void checkDuplicateHostPortPairs(const std::vector<ServerConfig>& servers) {
 	std::set<std::string> seen;
-	
+
 	for (size_t i = 0; i < servers.size(); ++i) {
 		const std::string& host = servers[i].host;
 		for (size_t j = 0; j < servers[i].ports.size(); ++j) {

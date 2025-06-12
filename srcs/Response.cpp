@@ -3,15 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   Response.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/19 07:13:21 by kellen            #+#    #+#             */
-/*   Updated: 2025/05/21 18:03:41 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 02:29:54 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/Response.hpp"
-#include <sstream>
+#include "WebServ.hpp"
 
 /*
 * Constructor — currently does nothing, but good to have.
@@ -26,6 +25,7 @@ std::string Response::buildHeader(int statusCode, size_t contentLength, const st
 	header << "HTTP/1.1 " << statusCode << " " << HttpStatus::getStatusMessages(statusCode) << "\r\n";
 	header << "Content-Length: " << contentLength << "\r\n";
 	header << "Content-Type: " << contentType << "; charset=utf-8\r\n";
+	header << "Connection: close\r\n";  // ← Only add this if you want
 	header << "\r\n";
 	return header.str();
 }
@@ -34,10 +34,10 @@ std::string Response::buildHeader(int statusCode, size_t contentLength, const st
  * This function returns the appropriate Content-Type for a given file path.
  */
 std::string Response::getContentType(const std::string& path) {
+
 	size_t dot = path.rfind('.');
 	if (dot == std::string::npos)
 		return "application/octet-stream";
-
 	std::string ext = path.substr(dot);
 
 	if (ext == ".html") return "text/html";
@@ -50,6 +50,7 @@ std::string Response::getContentType(const std::string& path) {
 	if (ext == ".svg")  return "image/svg+xml";
 	if (ext == ".txt")  return "text/plain";
 	if (ext == ".json") return "application/json";
+	if (ext == ".pdf") return "application/pdf";
 
 	return "application/octet-stream";
 }

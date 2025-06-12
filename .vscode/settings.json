@@ -71,6 +71,7 @@
 		"utility": "cpp",
 		"ranges": "cpp",
 		"span": "cpp",
-		"cinttypes": "cpp"
+		"cinttypes": "cpp",
+		"text": "cpp"
 	}
 }

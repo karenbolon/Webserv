@@ -3,17 +3,18 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.hpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:30 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/11 17:35:38 by keramos-         ###   ########.fr       */
+/*   Updated: 2025/06/12 00:20:45 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#pragma once
+#ifndef CLIENTCONNECTION_HPP
+#define CLIENTCONNECTION_HPP
 
 #include <string>
-#include "../include/ServerConfig.hpp"
+
 
 enum ClientState {
   READING_HEADERS,
@@ -36,3 +37,5 @@ class ClientConnection {
     bool        isRequestComplete() const;
     int        recvFullRequest(int client_fd, const ServerConfig& config);
 };
+
+#endif // CLIENTCONNECTION_HPP

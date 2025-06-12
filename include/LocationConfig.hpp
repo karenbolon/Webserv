@@ -3,14 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   LocationConfig.hpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:22 by kbolon            #+#    #+#             */
-/*   Updated: 2025/05/26 16:00:14 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/06/12 00:33:41 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#pragma once
+#ifndef LOCATIONCONFIG_HPP
+#define LOCATIONCONFIG_HPP
 
 #include <map>
 #include <string>
@@ -35,3 +36,5 @@ struct	LocationConfig {
 	LocationConfig();
 	void	print() const;
 };
+
+#endif // LOCATIONCONFIG_HPP
