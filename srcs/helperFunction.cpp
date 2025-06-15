@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/12 22:53:41 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/15 19:13:46 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -241,4 +241,62 @@ void handleClientCleanup(int fd, std::vector<pollfd>& fds,
 	// Remove from poll fds
 	fds.erase(fds.begin() + i);
 	--i;
+}
+
+std::string generateJsonDirectoryListing(const std::string& dirPath) {
+	std::ostringstream json;
+	json << "[";
+
+	DIR* dir = opendir(dirPath.c_str());
+	if (!dir) {
+		json << "]";
+		return json.str();
+	}
+
+	std::vector<std::string> files;
+	struct dirent* entry;
+
+	// Collect all files (excluding . and ..)
+	while ((entry = readdir(dir)) != NULL) {
+		std::string name = entry->d_name;
+		if (name != "." && name != "..") {
+			std::string fullPath = dirPath + "/" + name;
+			struct stat statbuf;
+			if (stat(fullPath.c_str(), &statbuf) == 0 && S_ISREG(statbuf.st_mode)) {
+				files.push_back(name);
+			}
+		}
+	}
+	closedir(dir);
+
+	// Sort files by name
+	std::sort(files.begin(), files.end());
+
+	// Generate JSON
+	for (size_t i = 0; i < files.size(); ++i) {
+		if (i > 0) json << ",";
+
+		std::string fullPath = dirPath + "/" + files[i];
+		struct stat statbuf;
+		stat(fullPath.c_str(), &statbuf);
+
+		// Determine file type
+		std::string fileType = "document";
+		std::string ext = files[i].substr(files[i].find_last_of('.') + 1);
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+		if (ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "gif" || ext == "webp") {
+			fileType = "image";
+		}
+
+		json << "{";
+		json << "\"name\":\"" << files[i] << "\",";
+		json << "\"type\":\"" << fileType << "\",";
+		json << "\"size\":" << statbuf.st_size << ",";
+		json << "\"uploadTime\":" << (statbuf.st_mtime * 1000); // JavaScript timestamp
+		json << "}";
+	}
+
+	json << "]";
+	return json.str();
 }

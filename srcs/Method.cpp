@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/06/12 21:27:00 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/15 19:15:28 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,19 @@
 void handleGet(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
 	std::cout << "📥 Handling GET request for " << path << std::endl;
 
+	// NEW: Handle API endpoint for listing uploaded files
+	if (path == "/api/photos" || path == "/api/files") {
+		std::string uploadDir = "www/upload"; // or use location.upload_path
+		std::string jsonResponse = generateJsonDirectoryListing(uploadDir);
+
+		// Send JSON response
+		std::string response = Response::build(200, jsonResponse, "application/json");
+		ssize_t sent = send(fd, response.c_str(), response.size(), 0);
+		if (sent != (ssize_t)response.size()) {
+			std::cerr << "❌ Failed to send JSON response\n";
+		}
+		return;
+	}
 
 	// Check if path is a directory and autoindex is enabled
 	std::string fullPath = location.root + path;
@@ -386,7 +399,7 @@ void handleSimpleUpload(const std::string& request, int client_fd, const ServerC
 	// Step 5: Send success response
 	std::string successResponse = loadAndProcessSuccessTemplate(config, filename);
 	sendHtmlResponse(client_fd, 200, successResponse);
-	
+
 	std::cout << "📤 Success response sent!" << std::endl;
 }
 

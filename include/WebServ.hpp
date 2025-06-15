@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/06/12 17:16:08 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/15 19:13:00 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -119,5 +119,6 @@ std::string	loadAndProcessSuccessTemplate(const ServerConfig& config, const std:
 std::string	loadAndProcessDeleteTemplate(const ServerConfig& config, const std::string& filename);
 void		replaceTemplateVariables(std::string& templateContent, const std::string& filename, const std::string& action);
 std::string	extractBoundary(const std::string& request);
+std::string	generateJsonDirectoryListing(const std::string& dirPath);
 
 #endif // WEBSERV_HPP

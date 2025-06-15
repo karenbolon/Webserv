@@ -38,6 +38,12 @@ header {
 	transform: translateY(-5px) rotate(1deg);
 }
 
+.photo-preview {
+	width: 100%;
+	height: 250px;
+	object-fit: cover;
+}
+
 .photo-placeholder {
 	width: 100%;
 	height: 250px;
@@ -49,42 +55,209 @@ header {
 	font-size: 50px;
 }
 
-.photo-card img {
-	width: 100%;
-	height: 250px;
-	object-fit: cover;
+.photo-info {
+	padding: 15px 20px;
 }
 
-.photo-info {
-	padding: 20px;
+.photo-filename {
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 10px;
+	word-break: break-word;
 }
 
 .photo-actions {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	color: #999;
-	font-size: 0.9rem;
 }
 
-/* Like Button */
-.like-btn {
+.action-buttons {
+	display: flex;
+	gap: 10px;
+}
+
+.like-btn, .delete-btn {
 	background: none;
 	border: none;
 	cursor: pointer;
 	display: flex;
 	align-items: center;
 	gap: 5px;
+	padding: 5px 10px;
+	border-radius: 15px;
+	transition: all 0.2s ease;
+	font-size: 14px;
+}
+
+.like-btn {
 	color: #ff69b4;
-	transition: transform 0.2s ease;
 }
 
 .like-btn:hover {
-	transform: scale(1.1);
+	background: rgba(255, 105, 180, 0.1);
+	transform: scale(1.05);
 }
 
 .like-btn.liked {
 	color: #ff1493;
+	background: rgba(255, 20, 147, 0.1);
+}
+
+.delete-btn {
+	color: #ff6b6b;
+}
+
+.delete-btn:hover {
+	background: rgba(255, 107, 107, 0.1);
+	transform: scale(1.05);
+}
+
+.photo-time {
+	color: #999;
+	font-size: 0.9rem;
+}
+
+/* Confirmation Modal */
+.modal-overlay {
+	display: none;
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 1000;
+	animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: white;
+	padding: 30px;
+	border-radius: 20px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+	text-align: center;
+	max-width: 400px;
+	width: 90%;
+	animation: slideIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes slideIn {
+	from { transform: translate(-50%, -60%) scale(0.9); opacity: 0; }
+	to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.modal-icon {
+	font-size: 60px;
+	margin-bottom: 20px;
+}
+
+.modal-title {
+	color: #ff1493;
+	font-size: 1.5rem;
+	margin-bottom: 10px;
+}
+
+.modal-message {
+	color: #666;
+	margin-bottom: 20px;
+	line-height: 1.5;
+}
+
+.modal-filename {
+	background: rgba(255, 107, 107, 0.1);
+	padding: 8px 15px;
+	border-radius: 15px;
+	color: #ff1493;
+	font-weight: bold;
+	margin-bottom: 25px;
+	display: inline-block;
+}
+
+.modal-buttons {
+	display: flex;
+	gap: 15px;
+	justify-content: center;
+}
+
+.modal-btn {
+	padding: 10px 25px;
+	border: none;
+	border-radius: 20px;
+	font-size: 1rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.modal-btn-cancel {
+	background: #f0f0f0;
+	color: #666;
+}
+
+.modal-btn-cancel:hover {
+	background: #e0e0e0;
+}
+
+.modal-btn-delete {
+	background: linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%);
+	color: white;
+}
+
+.modal-btn-delete:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+}
+
+/* Loading state */
+.loading {
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+.loading-text {
+	color: #ff69b4;
+	font-style: italic;
+}
+
+/* Empty state */
+.empty-gallery {
+	text-align: center;
+	padding: 60px 20px;
+	color: #999;
+}
+
+.empty-gallery-icon {
+	font-size: 80px;
+	margin-bottom: 20px;
+}
+
+.empty-gallery h3 {
+	color: #ff1493;
+	margin-bottom: 10px;
+}
+
+.refresh-btn {
+	margin-top: 20px;
+	padding: 10px 20px;
+	background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+	color: white;
+	border: none;
+	border-radius: 20px;
+	cursor: pointer;
+	transition: transform 0.3s ease;
+}
+
+.refresh-btn:hover {
+	transform: translateY(-2px);
 }
 
 /* Chat Bubble */
