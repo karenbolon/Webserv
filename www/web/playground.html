@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>42 WebServ - Developer's Playground</title>
+	<link rel="stylesheet" href="/style.css"/>
+	<link rel="stylesheet" href="/css/cgi-bin.css"/>
+	<script src="/scripts/theme.js"></script>
+</head>
+<body>
+	<div class="container">
+		<!-- <h1>🚀 WebServ Playground</h1> -->
+		<h1>
+			<span class="sparkle sparkle-1">✨</span>
+			🚀 WebServ Playground
+			<span class="sparkle sparkle-2">✨</span>
+			<span class="sparkle sparkle-3">⭐</span>
+		</h1>
+		<p class="subtitle">Explore the magic of CGI scripts!</p>
+
+		<nav class="nav-buttons">
+			<a href="/index.html" class="nav-btn">🖼️ Home</a>
+			<a href="/web/about.html" class="nav-btn">💕 About</a>
+		</nav>
+
+		<div class="grid">
+			<div class="cgi-card">
+				<span class="cgi-icon">😂</span>
+				<div class="cgi-title">Joke Generator</div>
+				<div class="cgi-desc">Need a laugh? Get programming jokes powered by PHP!</div>
+				<form method="GET" action="/cgi-bin/joke.php">
+					<button type="submit" class="cgi-btn">Tell me a joke!</button>
+				</form>
+				<!-- <a href="/cgi-bin/joke.php" class="cgi-btn">Tell me a joke!</a> -->
+			</div>
+
+			<div class="cgi-card">
+				<span class="cgi-icon">🌤️</span>
+				<div class="cgi-title">Weather Station</div>
+				<div class="cgi-desc">Check Berlin's weather with our Ruby-powered weather app!</div>
+				<form method="GET" action="/cgi-bin/weather.rb">
+					<button type="submit" class="cgi-btn success-btn">Check Weather</button>
+				</form>
+				<!-- <a href="/cgi-bin/weather.rb" class="cgi-btn success-btn">Check Weather</a> -->
+			</div>
+
+			<div class="cgi-card">
+				<span class="cgi-icon">🍪</span>
+				<div class="cgi-title">Cookie Lab</div>
+				<div class="cgi-desc">Experiment with cookies and sessions using Python!</div>
+				<form method="GET" action="/cgi-bin/cookie_test.py">
+					<button type="submit" class="cgi-btn info-btn">Test Cookies</button>
+				</form>
+				<!-- <a href="/cgi-bin/cookie_test.py" class="cgi-btn info-btn">Test Cookies</a> -->
+			</div>
+
+			<div class="cgi-card">
+				<span class="cgi-icon">🐪</span>
+				<div class="cgi-title">Perl Adventure</div>
+				<div class="cgi-desc">Experience the classic "Hello World" in Perl style!</div>
+				<form method="GET" action="/cgi-bin/helloWorld.pl">
+					<button type="submit" class="cgi-btn success-btn">Say Hello</button>
+				</form>
+				<!-- <a href="/cgi-bin/helloWorld.pl" class="cgi-btn success-btn">Say Hello</a> -->
+			</div>
+
+			<div class="cgi-card">
+				<span class="cgi-icon">💥</span>
+				<div class="cgi-title">Crash Test</div>
+				<div class="cgi-desc">See how our server handles errors gracefully!</div>
+				<form method="GET" action="/cgi-bin/crash.py">
+					<button type="submit" class="cgi-btn danger-btn">Simulate Crash</button>
+				</form>
+				<!-- <a href="/cgi-bin/crash.py" class="cgi-btn danger-btn">Simulate Crash</a> -->
+			</div>
+
+			<div class="cgi-card">
+				<span class="cgi-icon">☕</span>
+				<div class="cgi-title">Coffee Time</div>
+				<div class="cgi-desc">Do you want some Coffee!</div>
+				<form method="GET" action="/cgi-bin/badscript.py">
+					<button type="submit" class="cgi-btn coffee-btn">Brew Coffee</button>
+				</form>
+				<!-- <a href="/cgi-bin/badscript.py" class="cgi-btn danger-btn">Trigger Error</a> -->
+			</div>
+
+		</div>
+
+		<div class="cgi-card">
+			<span class="cgi-icon">🔮</span>
+			<div class="cgi-title">Magic cookie</div>
+			<div class="cgi-desc">Check!</div>
+			<form method="GET" action="/cgi-bin/magicalCookie.py">
+				<button type="submit" class="cgi-btn">Our Magic Cookie.</button>
+			</form>
+			<!-- <a href="/cgi-bin/weather.rb" class="cgi-btn success-btn">Check Weather</a> -->
+		</div>
+
+
+		<div class="footer">
+			<p>🎓 Built for 42 School WebServ Project</p>
+			<p>CGI Scripts + HTTP Server = ❤️</p>
+		</div>
+	</div>
+</body>
+</html>

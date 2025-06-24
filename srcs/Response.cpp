@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/19 07:13:21 by kellen            #+#    #+#             */
-/*   Updated: 2025/06/12 02:29:54 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/23 22:34:44 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,17 +40,41 @@ std::string Response::getContentType(const std::string& path) {
 		return "application/octet-stream";
 	std::string ext = path.substr(dot);
 
+	// Convert to lowercase for case-insensitive comparison
+	for (size_t i = 0; i < ext.length(); ++i)
+		ext[i] = std::tolower(ext[i]);
+
+	// Enhanced image support
 	if (ext == ".html") return "text/html";
 	if (ext == ".css")  return "text/css";
 	if (ext == ".js")   return "application/javascript";
+
+	// Image formats - expanded and improved
 	if (ext == ".png")  return "image/png";
 	if (ext == ".jpg" || ext == ".jpeg") return "image/jpeg";
 	if (ext == ".gif")  return "image/gif";
-	if (ext == ".ico")  return "image/x-icon";
+	if (ext == ".bmp")  return "image/bmp";
+	if (ext == ".webp") return "image/webp";
 	if (ext == ".svg")  return "image/svg+xml";
+	if (ext == ".ico")  return "image/x-icon";
+	if (ext == ".tiff" || ext == ".tif") return "image/tiff";
+	if (ext == ".avif") return "image/avif";
+
+	// Other common types
 	if (ext == ".txt")  return "text/plain";
 	if (ext == ".json") return "application/json";
-	if (ext == ".pdf") return "application/pdf";
+	if (ext == ".pdf")  return "application/pdf";
+	if (ext == ".xml")  return "application/xml";
+
+	// Video formats
+	if (ext == ".mp4")  return "video/mp4";
+	if (ext == ".webm") return "video/webm";
+	if (ext == ".avi")  return "video/x-msvideo";
+
+	// Audio formats
+	if (ext == ".mp3")  return "audio/mpeg";
+	if (ext == ".wav")  return "audio/wav";
+	if (ext == ".ogg")  return "audio/ogg";
 
 	return "application/octet-stream";
 }

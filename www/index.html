@@ -6,6 +6,7 @@
 	<title>My Cute Photo Gallery</title>
 	<link rel="stylesheet" href="/style.css"/>
 	<link rel="stylesheet" href="/css/main.css">
+	<script src="/scripts/theme.js"></script>
 </head>
 <body>
 	<!-- Floating decorations -->
@@ -22,11 +23,15 @@
 				<span class="sparkle sparkle-3">⭐</span>
 			</h1>
 			<p class="subtitle">A collection of beautiful moments</p>
+
+		</header>
+
 		</header>
 
 		<nav class="nav-buttons">
 			<a href="upload.html" class="nav-btn">📸 Upload Photos</a>
 			<a href="/web/about.html" class="nav-btn">💕 About</a>
+			<a href="web/playground.html" class="nav-btn">🎮 Playground</a>
 			<button onclick="loadPhotos()" class="nav-btn">🔄 Refresh Gallery</button>
 		</nav>
 
@@ -79,6 +84,7 @@
 		// Global variables
 		let currentPhotos = [];
 		let currentDeleteFile = null;
+		let editingFilename = null;
 
 		// Initialize page
 		document.addEventListener('DOMContentLoaded', function() {
@@ -151,16 +157,24 @@
 			photoGrid.innerHTML = photos.map((photo, index) => {
 				const timeAgo = getTimeAgo(photo.uploadTime);
 				const isImage = photo.type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(photo.name);
+				const isVideo = photo.type === 'video' || /\.(mp4|avi|mov|webm|ogg)$/i.test(photo.name);
 
 				return `
 					<div class="photo-card" data-filename="${photo.name}">
 						${isImage ?
 							`<img src="/upload/${photo.name}" alt="${photo.name}" class="photo-preview" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
 							<div class="photo-placeholder" style="display: none;">📷</div>` :
+						isVideo ?
+							`<video src="/upload/${photo.name}" class="video-preview" controls></video>` :
 							`<div class="photo-placeholder">📄</div>`
 						}
 						<div class="photo-info">
-							<div class="photo-filename">${photo.name}</div>
+							<div class="photo-filename-container" id="filename-container-${photo.name}">
+								<div class="photo-filename" id="filename-display-${photo.name}">${photo.name}</div>
+								<button class="edit-filename-btn" onclick="startEditingFilename('${photo.name}')" title="Edit filename">
+									✏️
+								</button>
+							</div>
 							<div class="photo-actions">
 								<span class="photo-time">${timeAgo}</span>
 								<div class="action-buttons">
@@ -178,6 +192,180 @@
 					</div>
 				`;
 			}).join('');
+		}
+
+		// Start editing filename
+		function startEditingFilename(originalFilename) {
+			// Prevent multiple simultaneous edits
+			if (editingFilename) {
+				cancelEditingFilename(editingFilename);
+			}
+
+			editingFilename = originalFilename;
+			const container = document.getElementById(`filename-container-${originalFilename}`);
+			const photoCard = document.querySelector(`[data-filename="${originalFilename}"]`);
+
+			if (!container || !photoCard) return;
+
+			// Add editing class for visual feedback
+			container.classList.add('editing-filename');
+
+			// Get current filename (might be different from original if already renamed)
+			const currentFilename = photoCard.getAttribute('data-filename');
+
+			// Create edit interface
+			container.innerHTML = `
+				<input type="text" class="filename-edit-input" id="filename-input-${originalFilename}"
+				       value="${currentFilename}" maxlength="255">
+				<div class="filename-edit-controls">
+					<button class="filename-save-btn" onclick="saveFilename('${originalFilename}')" title="Save">
+						✅
+					</button>
+					<button class="filename-cancel-btn" onclick="cancelEditingFilename('${originalFilename}')" title="Cancel">
+						❌
+					</button>
+				</div>
+			`;
+
+			// Focus and select the input
+			const input = document.getElementById(`filename-input-${originalFilename}`);
+			input.focus();
+
+			// Select filename without extension for easier editing
+			const dotIndex = currentFilename.lastIndexOf('.');
+			if (dotIndex > 0) {
+				input.setSelectionRange(0, dotIndex);
+			} else {
+				input.select();
+			}
+
+			// Handle Enter and Escape keys
+			input.addEventListener('keydown', function(e) {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					saveFilename(originalFilename);
+				} else if (e.key === 'Escape') {
+					e.preventDefault();
+					cancelEditingFilename(originalFilename);
+				}
+			});
+		}
+
+		// Save filename
+		async function saveFilename(originalFilename) {
+			const input = document.getElementById(`filename-input-${originalFilename}`);
+			const container = document.getElementById(`filename-container-${originalFilename}`);
+			const photoCard = document.querySelector(`[data-filename="${originalFilename}"]`);
+
+			if (!input || !container || !photoCard) return;
+
+			const newFilename = input.value.trim();
+			const currentFilename = photoCard.getAttribute('data-filename');
+
+			// Validate new filename
+			if (!newFilename) {
+				showNotification('❌ Filename cannot be empty', 'error');
+				return;
+			}
+
+			if (newFilename === currentFilename) {
+				// No change, just cancel editing
+				cancelEditingFilename(originalFilename);
+				return;
+			}
+
+			// Check for invalid characters
+			if (/[<>:"/\\|?*]/.test(newFilename)) {
+				showNotification('❌ Filename contains invalid characters', 'error');
+				return;
+			}
+
+			// Add loading state
+			container.classList.add('renaming');
+			input.disabled = true;
+
+			try {
+				// Send rename request to server using PUT with special header
+				const response = await fetch(`/upload/${currentFilename}`, {
+					method: 'PUT',
+					headers: {
+						'X-Rename-To': newFilename,
+						'Content-Type': 'text/plain'
+					},
+					body: '' // Empty body for rename operation
+				});
+
+				if (response.ok) {
+					// Success! Update the UI
+					photoCard.setAttribute('data-filename', newFilename);
+
+					// Update current photos array
+					const photoIndex = currentPhotos.findIndex(photo => photo.name === currentFilename);
+					if (photoIndex !== -1) {
+						currentPhotos[photoIndex].name = newFilename;
+					}
+
+					// Update image/video source if needed
+					const mediaElement = photoCard.querySelector('.photo-preview, .video-preview');
+					if (mediaElement) {
+						const oldSrc = mediaElement.src;
+						const newSrc = oldSrc.replace(currentFilename, newFilename);
+						mediaElement.src = newSrc;
+						if (mediaElement.tagName === 'IMG') {
+							mediaElement.alt = newFilename;
+						}
+					}
+
+					// Reset editing state
+					editingFilename = null;
+					container.classList.remove('editing-filename', 'renaming');
+
+					// Restore normal display
+					container.innerHTML = `
+						<div class="photo-filename" id="filename-display-${newFilename}">${newFilename}</div>
+						<button class="edit-filename-btn" onclick="startEditingFilename('${newFilename}')" title="Edit filename">
+							✏️
+						</button>
+					`;
+
+					// refresh photo list with the new filename for the updated photo name.
+					loadPhotos();
+
+					showNotification(`✅ Renamed to: ${newFilename}`, 'success');
+
+				} else {
+					throw new Error(`Failed to rename: ${response.status}`);
+				}
+
+			} catch (error) {
+				console.error('Error renaming file:', error);
+				showNotification(`❌ Failed to rename file`, 'error');
+
+				// Reset state on error
+				container.classList.remove('renaming');
+				input.disabled = false;
+				input.focus();
+			}
+		}
+
+		// Cancel editing filename
+		function cancelEditingFilename(originalFilename) {
+			const container = document.getElementById(`filename-container-${originalFilename}`);
+			const photoCard = document.querySelector(`[data-filename="${originalFilename}"]`);
+
+			if (!container || !photoCard) return;
+
+			editingFilename = null;
+			const currentFilename = photoCard.getAttribute('data-filename');
+
+			// Remove editing class and restore normal display
+			container.classList.remove('editing-filename');
+			container.innerHTML = `
+				<div class="photo-filename" id="filename-display-${currentFilename}">${currentFilename}</div>
+				<button class="edit-filename-btn" onclick="startEditingFilename('${currentFilename}')" title="Edit filename">
+					✏️
+				</button>
+			`;
 		}
 
 		// Toggle like button
@@ -320,8 +508,42 @@
 				from { transform: translateX(0); opacity: 1; }
 				to { transform: translateX(100px); opacity: 0; }
 			}
+			@keyframes slideIn {
+				from { transform: translateX(100%); opacity: 0; }
+				to { transform: translateX(0); opacity: 1; }
+			}
 		`;
 		document.head.appendChild(style);
+
+		// // Helper function to get cookie value
+		// function getCookie(name) {
+		// 	const value = `; ${document.cookie}`;
+		// 	const parts = value.split(`; ${name}=`);
+		// 	if (parts.length === 2) return parts.pop().split(';').shift();
+		// }
+
+		// // Show welcome message
+		// function showWelcomeMessage(message) {
+		// 	showNotification(message, 'info');
+		// }
+
+		// // Read cookies and apply to main gallery
+		// function applyCookiePreferences() {
+		// 	const theme = getCookie('gallery_theme') || 'pink';
+		// 	const personality = getCookie('personality_mode') || 'bubbly';
+		// 	const visitorName = getCookie('visitor_name');
+
+		// 	// Apply theme to gallery
+		// 	document.body.className = `theme-${theme} personality-${personality}`;
+
+		// 	// Show personalized welcome
+		// 	if (visitorName) {
+		// 		showWelcomeMessage(`Welcome back, ${visitorName}! ✨`);
+		// 	}
+		// }
+
+		// document.addEventListener('DOMContentLoaded', applyCookiePreferences);
+
 	</script>
 
 	<!-- Footer -->

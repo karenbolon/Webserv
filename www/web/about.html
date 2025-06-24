@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>About Our Magical WebServ</title>
+	<link rel="stylesheet" href="/style.css">
+	<link rel="stylesheet" href="/css/about.css">
+	<script src="/scripts/theme.js"></script>
+	<script src="/scripts/theme.js"></script>
+</head>
+<body>
+	<!-- Floating decorative elements -->
+	<div class="floating-element" style="top: 10%; left: 5%; animation-delay: 0s;">🌟</div>
+	<div class="floating-element" style="top: 20%; right: 10%; animation-delay: 2s;">🦄</div>
+	<div class="floating-element" style="bottom: 30%; left: 8%; animation-delay: 4s;">✨</div>
+	<div class="floating-element" style="bottom: 15%; right: 12%; animation-delay: 6s;">🍪</div>
+
+	<div class="about-container">
+		<!-- Header -->
+		<header style="text-align: center; margin-bottom: 40px;">
+			<h1 style="font-size: 3rem; margin-bottom: 15px;">
+				<span class="sparkle sparkle-1">✨</span>
+				About Our Magical WebServ
+				<span class="sparkle sparkle-2">✨</span>
+			</h1>
+			<p style="font-size: 1.3rem; color: #666; margin: 0;">
+				A journey into the wonderful world of web servers! 🌐✨
+			</p>
+		</header>
+
+		<!-- Main Story Section -->
+		<div class="story-section">
+
+			<div style="font-size: 1.3rem; line-height: 1.7; color: #3a3838;">
+				<p>
+					<strong>WebServ</strong> is our magical creation - a web server built from scratch in C++98!
+					But what exactly <em>is</em> a web server? Great question! 🤔
+				</p>
+			</div>
+		</div>
+
+		<!-- Restaurant Analogy -->
+		<div class="restaurant-story">
+			<h2 style="color: #ff1493; text-align: center; margin-bottom: 25px;">
+				🍽️ Imagine Your Website is Like a Restaurant! 🍽️
+			</h2>
+			<div style="font-size: 1.1rem; line-height: 1.6; color: #333;">
+				<p><strong>🏢 The Web Server (WebServ)</strong> is like the <em>restaurant building</em> - it's always open, waiting for hungry customers!</p>
+
+				<p><strong>👨‍🍳 The Chef</strong> is like our <em>CGI scripts</em> (Python, PHP, Perl, Ruby) - they cook up special dishes (dynamic content) just for you!</p>
+
+				<p><strong>📋 The Menu</strong> is like your <em>HTML pages</em> - it shows you all the yummy things you can order!</p>
+
+				<p><strong>🎂 The Kitchen Storage</strong> is like our <em>file system</em> - where we keep all the ingredients (images, documents, files)!</p>
+
+				<p><strong>🚚 The Delivery Service</strong> is like <em>HTTP methods</em> - different ways to get your food delivered!</p>
+			</div>
+		</div>
+
+		<!-- HTTP Methods Showcase -->
+		<div style="margin: 40px 0;">
+			<h3 style="color: #ff1493; text-align: center; margin-bottom: 30px; font-size: 2rem;">
+				🚀 Our Magical HTTP Methods Menu!
+			</h3>
+
+			<div class="method-showcase">
+				<div class="method-card">
+					<div class="method-emoji">📖</div>
+					<div class="method-title">GET</div>
+					<p style="margin: 10px 0; color: #666;">
+						"Can I see the menu please?"<br>
+						<em>Reading/viewing content</em>
+					</p>
+				</div>
+
+				<div class="method-card">
+					<div class="method-emoji">📮</div>
+					<div class="method-title">POST</div>
+					<p style="margin: 10px 0; color: #666;">
+						"Here's my order!"<br>
+						<em>Sending new information</em>
+					</p>
+				</div>
+
+				<div class="method-card">
+					<div class="method-emoji">🔄</div>
+					<div class="method-title">PUT</div>
+					<p style="margin: 10px 0; color: #666;">
+						"Replace my entire order!"<br>
+						<em>Updating/replacing files</em>
+					</p>
+				</div>
+
+				<div class="method-card">
+					<div class="method-emoji">🗑️</div>
+					<div class="method-title">DELETE</div>
+					<p style="margin: 10px 0; color: #666;">
+						"Cancel my order!"<br>
+						<em>Removing content</em>
+					</p>
+				</div>
+
+				<div class="method-card">
+					<div class="method-emoji">📋</div>
+					<div class="method-title">HEAD</div>
+					<p style="margin: 10px 0; color: #666;">
+						"Just tell me if you have it!"<br>
+						<em>Checking if something exists</em>
+					</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Interactive Demo Section -->
+		<div class="interactive-demo">
+			<h3 style="color: #ff1493; margin-bottom: 20px;">
+				🎮 Try Our Methods Right Now!
+			</h3>
+			<p style="margin-bottom: 20px; color: #666;">
+				Click these buttons to see our HTTP methods in action:
+			</p>
+
+			<button class="demo-button" onclick="demoGet()">📖 GET Demo</button>
+			<button class="demo-button" onclick="demoPost()">📮 POST Demo</button>
+			<button class="demo-button" onclick="demoPut()">🔄 PUT Demo</button>
+			<button class="demo-button" onclick="demoDelete()">🗑️ DELETE Demo</button>
+			<button class="demo-button" onclick="demoHead()">📋 HEAD Demo</button>
+		</div>
+
+		<!-- Technical Fun Facts -->
+		<div class="tech-fun-fact">
+			<h3 style="color: #e17055; margin-bottom: 15px;">🤓 Cool Technical Facts!</h3>
+			<div style="text-align: left; max-width: 800px; margin: 0 auto;">
+				<p>🔧 <strong>Built in C++98:</strong> We used the classic version for maximum compatibility!</p>
+				<p>⚡ <strong>Non-blocking I/O:</strong> Our server can handle multiple customers at once!</p>
+				<p>🍪 <strong>Cookie Support:</strong> We remember your preferences (like your magical theme)!</p>
+				<p>📝 <strong>CGI Scripts:</strong> Dynamic content in Python, PHP, Perl, and Ruby!</p>
+				<p>📁 <strong>File Uploads:</strong> Share your beautiful photos with the world!</p>
+				<p>🎨 <strong>Custom Error Pages:</strong> Even our errors are cute!</p>
+			</div>
+		</div>
+
+		<!-- Why We Built This -->
+		<div class="analogy-box">
+			<h3 style="color: #ff1493; margin-bottom: 15px;">
+				💭 Why Did We Build This Magical Server?
+			</h3>
+			<p style="font-size: 1.1rem; line-height: 1.6; margin: 0;">
+				At <strong>42 School</strong>, we believe in learning by doing! 🎓<br>
+				Instead of just using existing web servers, we built our own to understand
+				<em>exactly</em> how the internet works under the hood. It's like building
+				your own car to really understand how engines work! 🚗✨
+			</p>
+		</div>
+
+		<!-- Creators Section -->
+		<div class="creators-section">
+			<h3 style="margin-bottom: 20px; font-size: 1.8rem;">
+				👨‍💻👩‍💻 Meet the Magical Creators!
+			</h3>
+			<p style="font-size: 1.2rem; line-height: 1.6; margin-bottom: 15px;">
+				This adorable web server was crafted with love by:
+			</p>
+			<div style="font-size: 1.3rem; font-weight: bold;">
+				<p>🌸 <strong>keramos-</strong> & <strong>kbolon</strong> 🌸</p>
+			</div>
+			<p style="margin-top: 15px; font-style: italic;">
+				Two passionate developers who believe that learning should be fun,
+				magical, and filled with unicorns! 🦄✨
+			</p>
+		</div>
+
+		<!-- Navigation -->
+		<div style="text-align: center; margin-top: 40px;">
+			<a href="/" class="nav-btn">🏠 Back to Gallery</a>
+			<a href="/web/playground.html" class="nav-btn">🎮 Try Our Playground</a>
+			<a href="/upload.html" class="nav-btn">📸 Upload Photos</a>
+		</div>
+	</div>
+
+	<script>
+		// Interactive demo functions
+		function demoGet() {
+			alert('📖 GET Method Demo!\n\nWhat happens when you visit any page?\nThe server reads and sends you the content.\n\nTry visiting our gallery - that\'s a GET request! ✨');
+		}
+
+		function demoPost() {
+			alert('📮 POST Method Demo!\n\nWhat happens when you upload photos?\nYou send data TO the server.\n\nTry our upload page to see POST in action! 🌟');
+		}
+
+		function demoPut() {
+			alert('🔄 PUT Method Demo!\n\nImagine you want to replace an entire file!\nPUT says "Here\'s the new version of this file!"\n\nLike rewriting your entire diary entry! 📝✨');
+		}
+
+		function demoDelete() {
+			alert('🗑️ DELETE Method Demo!\n\nThis removes files from the server!\n\nYou can try this in our gallery - delete photos you no longer want! 🌟');
+		}
+
+		function demoHead() {
+			alert('📋 HEAD Method Demo!\n\nThis asks "Do you have this file?" without downloading it!\nLike asking if a restaurant has pizza without ordering it!\n\nVery useful for checking if files exist! ✨');
+		}
+
+		// Add some sparkle effects
+		function createSparkle() {
+			const sparkle = document.createElement('div');
+			sparkle.innerHTML = '✨';
+			sparkle.style.cssText = `
+				position: fixed;
+				left: ${Math.random() * window.innerWidth}px;
+				top: ${Math.random() * window.innerHeight}px;
+				font-size: ${15 + Math.random() * 10}px;
+				pointer-events: none;
+				z-index: 9999;
+				animation: sparkle-fade 3s ease-out forwards;
+				color: #ff69b4;
+			`;
+
+			document.body.appendChild(sparkle);
+			setTimeout(() => sparkle.remove(), 3000);
+		}
+
+		// Create sparkles periodically
+		setInterval(createSparkle, 3000);
+
+		// Add sparkle animation CSS
+		const sparkleStyle = document.createElement('style');
+		sparkleStyle.textContent = `
+			@keyframes sparkle-fade {
+				0% { opacity: 1; transform: scale(0) rotate(0deg); }
+				50% { opacity: 1; transform: scale(1) rotate(180deg); }
+				100% { opacity: 0; transform: scale(0) rotate(360deg); }
+			}
+		`;
+		document.head.appendChild(sparkleStyle);
+	</script>
+</body>
+</html>

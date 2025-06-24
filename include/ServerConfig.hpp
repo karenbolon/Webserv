@@ -6,12 +6,12 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:17 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/12 00:24:15 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/18 16:00:49 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVERCONFIG_HPP
-#define SERVERCONFIG_HPP
+# define SERVERCONFIG_HPP
 
 #include <string>
 #include <vector>

@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/12 00:22:58 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/24 03:00:07 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,21 +63,28 @@ void handleCgi(const Request req, int fd, const ServerConfig& config, std::strin
 
 	std::string relativePath = fullPath.substr(location->path.length());
 
-	std::string scriptPath = location->root;
+	char	cwd[1024];
+	//get current working directory
+	getcwd(cwd, sizeof(cwd));
+	//make absolute base path (required for php)
+	std::string scriptPath = std::string(cwd);
+	scriptPath += '/';
+	scriptPath += location->root;
+	// if (!scriptPath.empty() && scriptPath.back() != '/')
 	if (!scriptPath.empty() && scriptPath[scriptPath.size() - 1] != '/')
 		scriptPath += '/';
 	scriptPath += relativePath;
-//	std::string relativePath = req.getPath().substr(location->path.length()); // e.g. "/hello.py"
-//	std::string scriptPath = location->root;
-//	if (!scriptPath.empty() && scriptPath[scriptPath.size() - 1] != '/')
-//		scriptPath += '/';
-//	scriptPath += relativePath; // e.g. ./cgi-bin/hello.py
 	std::cout << "👣 Running CGI script: " << scriptPath << " with " << interpreter << std::endl;
 	int	inputPipe[2];
 	int	outputPipe[2];
 	if (pipe(inputPipe) == -1 || pipe(outputPipe) == -1) {
 		std::cerr << "❌ Failed to create pipes\n";
 		return;
+	}
+	std::cerr << "💡 Headers received:\n";
+	const std::map<std::string, std::string>& headers = req.getHeaders();
+	for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+		std::cerr << it->first << ": " << it->second << std::endl;
 	}
 	pid_t pid = fork();
 	if (pid < 0) {
@@ -118,12 +125,20 @@ void handleCgi(const Request req, int fd, const ServerConfig& config, std::strin
 		envStrings.push_back("CONTENT_TYPE=text/plain");
 		envStrings.push_back("QUERY_STRING=" + req.getQuery());
 		envStrings.push_back("SCRIPT_NAME=" + relativePath);
+		if (scriptPath.find(".php") != std::string::npos) {
+			envStrings.push_back("SCRIPT_FILENAME=" + scriptPath);
+			envStrings.push_back("REDIRECT_STATUS=200");
+		}
+		const std::map<std::string, std::string>& headers = req.getHeaders();
+		std::map<std::string, std::string>::const_iterator cookieIt = headers.find("cookie");
+		if (cookieIt != headers.end())
+			envStrings.push_back("HTTP_COOKIE=" + cookieIt->second);
 
 		std::vector<char*> envp;
 		for (size_t i = 0; i < envStrings.size(); ++i)
 			envp.push_back(const_cast<char*>(envStrings[i].c_str()));
 		envp.push_back(NULL);
-
+		std::cerr << "📎 CGI SCRIPT PATH: " << scriptPath << std::endl;
 		execve(pathToInterpreterAndScript[0], pathToInterpreterAndScript, &envp[0]);
 		std::cerr << "❌ execve failed: " << strerror(errno) << std::endl;
 		exit(1);
@@ -139,32 +154,35 @@ void handleCgi(const Request req, int fd, const ServerConfig& config, std::strin
 		close(inputPipe[1]);
 
 		//read from CGI output and send to client
-		char buffer[4096];
+		char buffer[8192];
 		ssize_t bytes;
 		std::ostringstream response;
 
 		while((bytes = read(outputPipe[0], buffer, sizeof(buffer))) > 0)
 			response.write(buffer, bytes);
+
 		close(outputPipe[0]);
 		waitpid(pid, NULL, 0); //wait for child
-		std::string body = response.str();
-		size_t headerEnd = body.find("\r\n\r\n");
-		if (headerEnd != std::string::npos)
-			body = body.substr(headerEnd + 4);
-		std::ostringstream fullResponse;
-		sendHtmlResponse(fd, 200, body);
 
-		std::string responseStr = fullResponse.str();
-		if (responseStr.empty()) {
-			std::string errorBody = getErrorPageBody(500, config);
-			sendHtmlResponse(fd, 500, errorBody);
-			std::cerr << "❌ Empty CGI output — sending 500\n";
+		std::string output = response.str();
+		size_t headerEnd =output.find("\r\n\r\n");
+		if (headerEnd == std::string::npos) {
+			std::cerr << "❌ Invalid CGI output: Missing CRLF after headers\n";
 			return;
 		}
+
+		std::string headers = output.substr(0, headerEnd);
+		std::string body = output.substr(headerEnd + 4);
+
+		std::ostringstream fullResponse;
+		fullResponse << "HTTP/1.1 200 OK\r\n";
+		fullResponse << headers << "\r\n\r\n";
+		fullResponse << body;
+		std::string responseStr = fullResponse.str();
+
 		ssize_t sent = send(fd, responseStr.c_str(), responseStr.length(), 0);
-		if (sent != (ssize_t)responseStr.length())
+		if (sent != (ssize_t)output.length())
 			std::cerr << "❌ CGI response was interrupted\n";
 		std::cout << "📤 CGI output:\n" << responseStr << std::endl;
 	}
-
 }

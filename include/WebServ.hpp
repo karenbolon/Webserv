@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/06/15 19:13:00 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/24 23:47:02 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,7 +88,7 @@ void		handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, std::map<i
 				std::map<int, ServerSocket*>& clientToServer);
 LocationConfig	matchLocation(const std::string& path, const ServerConfig& config);
 // Add function declarations to WebServ.hpp
-void		handleGet(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config);
+void		handleGet(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
 void		handlePost(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
 void		handlePut(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
 void		handleDelete(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config);
@@ -120,5 +120,35 @@ std::string	loadAndProcessDeleteTemplate(const ServerConfig& config, const std::
 void		replaceTemplateVariables(std::string& templateContent, const std::string& filename, const std::string& action);
 std::string	extractBoundary(const std::string& request);
 std::string	generateJsonDirectoryListing(const std::string& dirPath);
+
+void		handleSignal(int signal);
+void		setupSignal();
+void		showUsage();
+bool		fileExists(const std::string& path);
+bool		hasAllowedExtension(const std::string& filename);
+bool		parseArguments(int argc, char **argv, std::string &configPath);
+void		artwelcom();
+std::string	executeScript(const std::string& interpreter, const std::string& scriptPath, const Request& req);
+std::string	formatCGIResponse(const std::string& scriptOutput);
+
+// Chunked transfer functions (no class needed!)
+bool		useChunkedTransfer(const std::string& fullPath);
+bool		sendFileChunked(int fd, const std::string& fullPath, const std::string& contentType);
+
+// Enhanced PUT handling functions
+void		handleFileRename(int fd, const std::string& path, const std::string& newName,
+	const LocationConfig& location, const ServerConfig& config);
+void		handleFileUpload(int fd, const Request& req, const std::string& path,
+	const LocationConfig& location, const ServerConfig& config);
+
+// Enhanced multiple file upload handler
+size_t		findNextFileSection(const std::string& request, const std::string& boundary, size_t startPos);
+void		handleEnhancedUpload(const std::string& request, int client_fd, const ServerConfig& config);
+bool		extractFilenameFromSection(const std::string& request, size_t sectionStart,
+	size_t sectionEnd, std::string& filename);
+bool		findFileContentInSection(const std::string& request, size_t sectionStart,
+		size_t sectionEnd, size_t& contentStart, size_t& contentLength);
+std::string		generateSimpleUploadResponse(const std::vector<std::string>& successFiles,
+			const std::vector<std::string>& failedFiles);
 
 #endif // WEBSERV_HPP

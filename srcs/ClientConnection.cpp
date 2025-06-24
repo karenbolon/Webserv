@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/12 00:36:47 by kellen           ###   ########.fr       */
+/*   Updated: 2025/06/24 02:56:32 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,7 @@ ClientConnection::~ClientConnection() {
 */
 int ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config) {
 	//switched to vector to handle images and pdfs
-	char buffer[8192];//8 kb buffer size
+	char buffer[65536]; // 64KB buffer to speed up transfer
 	int bytes = recv(client_fd, buffer, sizeof(buffer), 0);
 
 	if (bytes <= 0) {

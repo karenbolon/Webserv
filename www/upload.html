@@ -6,6 +6,7 @@
 	<title>Upload Files</title>
 	<link rel="stylesheet" href="/style.css">
 	<link rel="stylesheet" href="/css/upload.css">
+	<script src="/scripts/theme.js"></script>
 </head>
 <body>
 	<div class="upload-container">
@@ -26,6 +27,9 @@
 			<div class="file-list" id="fileList"></div>
 
 			<button type="submit" class="upload-btn" id="uploadBtn" disabled>Upload Files</button>
+			<div class="progress-container" id="progressContainer">
+					<div class="progress-bar" id="progressBar"></div>
+			</div>
 		</form>
 
 		<div class="back-link">
@@ -39,10 +43,13 @@
 			window.location.href = '/';
 		}
 
+		const uploadForm = document.querySelector('.upload-form');
 		const fileInput = document.querySelector('.file-input');
 		const fileList = document.getElementById('fileList');
 		const uploadBtn = document.getElementById('uploadBtn');
 		const dropArea = document.querySelector('.file-drop-area');
+		const progressContainer = document.getElementById('progressContainer');
+		const progressBar = document.getElementById('progressBar');
 		let selectedFiles = [];
 
 		// Drag and drop functionality
@@ -111,6 +118,20 @@
 			selectedFiles.forEach(file => dt.items.add(file));
 			fileInput.files = dt.files;
 		}
+
+		// Add some magical sparkles
+		function createSparkle() {
+			const sparkle = document.createElement('div');
+			sparkle.className = 'magic-sparkle';
+			sparkle.textContent = '✨';
+			sparkle.style.left = Math.random() * 100 + '%';
+			sparkle.style.top = Math.random() * 100 + '%';
+			document.body.appendChild(sparkle);
+
+			setTimeout(() => sparkle.remove(), 3000);
+		}
+
+		setInterval(createSparkle, 2000);
 
 	</script>
 </body>
