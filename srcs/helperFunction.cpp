@@ -6,7 +6,7 @@
 /*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/03 00:52:03 by kellen           ###   ########.fr       */
+/*   Updated: 2025/07/03 04:35:08 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -540,18 +540,21 @@ bool extractFilenameFromSection(const std::string& request, size_t sectionStart,
 
 bool sendAll(int fd, const char* buffer, size_t length) {
 	size_t totalSent = 0;
+	int retryCount = 0;
+	const int maxRetries = 1000;
+
 	while (totalSent < length) {
 		ssize_t sent = send(fd, buffer + totalSent, length - totalSent, 0);
 		if (sent < 0) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
-				usleep(1000);
-				continue;
-			}
-			return false;
+			if (++retryCount > maxRetries)
+				return false;
+			usleep(1000);
+			continue;
 		}
 		if (sent == 0)
 			return false;
 		totalSent += sent;
+		retryCount = 0; // Reset on successful send
 	}
 	return true;
 }
