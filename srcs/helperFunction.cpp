@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   helperFunction.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/30 17:09:59 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/03 00:52:03 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -169,7 +169,7 @@ void serveStaticFile(std::string path, int client_fd, const ServerConfig &config
 
 		if (sendFileChunked(client_fd, fullPath, contentType)) {
 			std::cout << "✅ Chunked transfer completed successfully" << std::endl;
-		} 
+		}
 		else {
 			std::cout << "❌ Chunked transfer failed, sending error" << std::endl;
 			std::string errorBody = getErrorPageBody(500, config);
@@ -241,9 +241,8 @@ std::string extractBoundary(const std::string& request) {
 void sendHtmlResponse(int fd, int code, const std::string& body) {
 
 	std::string response = Response::build(code, body, "text/html");
-	ssize_t sent = send(fd, response.c_str(), response.size(), 0);
-	if (sent != (ssize_t)response.size()) {
-		std::cerr << "❌ Failed to send response for status code: " << sent << " of " << response.size() << " bytes\n";
+	if (!sendAll(fd, response.c_str(), response.size())) {
+		std::cerr << "❌ Failed to send response for status code: " << code << "\n";
 	}
 }
 
@@ -424,8 +423,7 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 	std::string headerStr = headers.str();
 //	std::cout << "📤 Sending chunked headers (" << headerStr.size() << " bytes)" << std::endl;
 
-	ssize_t headerSent = send(fd, headerStr.c_str(), headerStr.size(), 0);
-	if (headerSent != (ssize_t)headerStr.size()) {
+	if (!sendAll(fd, headerStr.c_str(), headerStr.size())) {
 		std::cerr << "❌ Failed to send chunked headers" << std::endl;
 		file.close();
 		return false;
@@ -446,21 +444,21 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 		std::string chunkHeaderStr = chunkHeader.str();
 
 		// Send chunk size
-		if (send(fd, chunkHeaderStr.c_str(), chunkHeaderStr.size(), 0) != (ssize_t)chunkHeaderStr.size()) {
+		if (!sendAll(fd, chunkHeaderStr.c_str(), chunkHeaderStr.size())) {
 //			std::cerr << "❌ Failed to send chunk header" << std::endl;
 			file.close();
 			return false;
 		}
 
 		// Send chunk data
-		if (send(fd, buffer, bytesRead, 0) != (ssize_t)bytesRead) {
+		if (!sendAll(fd, buffer, bytesRead)) {
 //			std::cerr << "❌ Failed to send chunk data" << std::endl;
 			file.close();
 			return false;
 		}
 
 		// Send chunk trailing CRLF
-		if (send(fd, "\r\n", 2, 0) != 2) {
+		if (!sendAll(fd, "\r\n", 2)) {
 //			std::cerr << "❌ Failed to send chunk trailer" << std::endl;
 			file.close();
 			return false;
@@ -472,7 +470,7 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 	file.close();
 
 	// Send final chunk (size 0) to indicate end
-	if (send(fd, "0\r\n\r\n", 5, 0) != 5) {
+	if (!sendAll(fd, "0\r\n\r\n", 5)) {
 		std::cerr << "❌ Failed to send final chunk" << std::endl;
 		return false;
 	}
@@ -538,6 +536,24 @@ bool extractFilenameFromSection(const std::string& request, size_t sectionStart,
 
 	filename = section.substr(filenameStart, filenameEnd - filenameStart);
 	return !filename.empty();
+}
+
+bool sendAll(int fd, const char* buffer, size_t length) {
+	size_t totalSent = 0;
+	while (totalSent < length) {
+		ssize_t sent = send(fd, buffer + totalSent, length - totalSent, 0);
+		if (sent < 0) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+				usleep(1000);
+				continue;
+			}
+			return false;
+		}
+		if (sent == 0)
+			return false;
+		totalSent += sent;
+	}
+	return true;
 }
 
 /**

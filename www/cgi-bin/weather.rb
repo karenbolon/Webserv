@@ -9,40 +9,41 @@ puts "Content-Type: text/html; charset=utf-8\r\n\r\n"
 begin
 	uri = URI("https://wttr.in/Berlin?format=3")
 	weather = Net::HTTP.get(uri).strip
-  rescue => e
+rescue => e
 	weather = "🌤️ Berlin 15°C (Weather service temporarily unavailable)"
-  end
+end
 
-  # Determine theme based on weather
-  if weather.downcase.include?('sun') || weather.downcase.include?('clear')
+# Determine theme based on weather
+if weather.downcase.include?('sun') || weather.downcase.include?('clear')
 	bg_color = 'linear-gradient(135deg, #FFD700, #FFA500, #FF6347)'
 	primary_color = '#FF6347'
 	icon = '☀️'
 	particles = '🌞'
-  elsif weather.downcase.include?('rain') || weather.downcase.include?('drizzle')
+elsif weather.downcase.include?('rain') || weather.downcase.include?('drizzle')
 	bg_color = 'linear-gradient(135deg, #4682B4, #1E90FF, #00CED1)'
 	primary_color = '#1E90FF'
 	icon = '🌧️'
 	particles = '💧'
-  elsif weather.downcase.include?('snow')
+elsif weather.downcase.include?('snow')
 	bg_color = 'linear-gradient(135deg, #E6E6FA, #B0C4DE, #87CEEB)'
 	primary_color = '#4169E1'
 	icon = '❄️'
 	particles = '❄️'
-  elsif weather.downcase.include?('cloud')
+elsif weather.downcase.include?('cloud')
 	bg_color = 'linear-gradient(135deg, #708090, #C0C0C0, #D3D3D3)'
 	primary_color = '#696969'
 	icon = '☁️'
 	particles = '☁️'
-  else
+else
 	bg_color = 'linear-gradient(135deg, #87CEEB, #98FB98, #F0E68C)'
 	primary_color = '#4682B4'
 	icon = '🌤️'
 	particles = '✨'
-  end
+end
 
 puts '<html>'
 puts '<head>'
+puts '<title>Weather Station</title>'
 puts '<style>'
 puts 'body {'
 puts '  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;'

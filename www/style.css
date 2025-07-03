@@ -277,8 +277,9 @@ body.theme-mermaid { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100
 body.theme-cotton_candy { background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%); }
 body.theme-rainbow { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 25%, #a8edea 50%, #d299c2 75%, #fef9d7 100%); }
 body.theme-starlight { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-body.theme-fairy { background: linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%); }
-body.theme-butterfly { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+body.theme-gothic { background: linear-gradient(135deg, #1f1f4a 0%, #40407a 50%, #8b5a96 100%); }
+body.theme-violet { background: linear-gradient(135deg, #7a3994 0%, #bb307a 50%, #e9acfb 100%); }
+body.theme-shadow { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 30%, #2d2d2d 60%, #6a1b9a 100%); }
 
 /* Simple welcome message styling */
 .welcome-msg {

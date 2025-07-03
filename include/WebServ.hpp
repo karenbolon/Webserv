@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   WebServ.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/06/25 14:19:27 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/03 03:30:40 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,93 +59,94 @@ class ClientConnection;
 class Response;
 
 
-std::string	intToStr(int n);
-std::string	trim(std::string& s);
-std::string	cleanValue(std::string s);
-std::string	getContentType(const std::string& path);
-int			safe_socket(int domain, int type, int protocol);
-bool		safe_bind(int fd, sockaddr_in & addr);
-bool		safe_listen(int socket, int backlog);
-void		shutDownWebserv(std::vector<ServerSocket*>& serverSockets, std::map<int, ClientConnection*>& clients);
-void 		handleUpload(const std::string &request, int client_fd, const ServerConfig &config);
-void 		serveStaticFile(std::string path, int client_fd, const ServerConfig &config);
-std::string	getInterpreter(const std::string& path, const ServerConfig& config);
-void 		handleCgi(const Request req, int fd, const ServerConfig& config, std::string interpreter);
-std::string	getErrorPageBody(int code, const ServerConfig& config);
-void 		sendHtmlResponse(int fd, int code, const std::string& body);
-std::string	buildHtmlResponse(int code, const std::string& body);
-bool		validatePort(const std::string& portString);
-void		convertListenEntriesToPortsAndHost(ServerConfig& server);
-void 		checkDuplicateHostPortPairs(const std::vector<ServerConfig>& servers);
-void		runEventLoop(std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket,
+std::string		intToStr(int n);
+std::string		trim(std::string& s);
+std::string		cleanValue(std::string s);
+std::string		getContentType(const std::string& path);
+int				safe_socket(int domain, int type, int protocol);
+bool			safe_bind(int fd, sockaddr_in & addr);
+bool			safe_listen(int socket, int backlog);
+void			shutDownWebserv(std::vector<ServerSocket*>& serverSockets, std::map<int, ClientConnection*>& clients);
+void 			handleUpload(const std::string &request, int client_fd, const ServerConfig &config);
+void 			serveStaticFile(std::string path, int client_fd, const ServerConfig &config);
+std::string		getInterpreter(const std::string& path, const ServerConfig& config);
+void 			handleCgi(const Request req, int fd, const ServerConfig& config, std::string interpreter);
+std::string		getErrorPageBody(int code, const ServerConfig& config);
+void 			sendHtmlResponse(int fd, int code, const std::string& body);
+std::string		buildHtmlResponse(int code, const std::string& body);
+bool			validatePort(const std::string& portString);
+void			convertListenEntriesToPortsAndHost(ServerConfig& server);
+void 			checkDuplicateHostPortPairs(const std::vector<ServerConfig>& servers);
+void			runEventLoop(std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket,
 				std::map<int, ClientConnection*>& clients, std::map<int, ServerSocket*>& clientToServer);
-bool 		initialiseSockets(const std::vector<ServerConfig>& servers, std::vector<ServerSocket*>& serverSockets,
+bool			initialiseSockets(const std::vector<ServerConfig>& servers, std::vector<ServerSocket*>& serverSockets,
 				std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket);
-void		handleExistingClient(int fd, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, size_t& i,
+void			handleExistingClient(int fd, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, size_t& i,
 				const ServerConfig& config);
-void		handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients,
+void			handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients,
 				std::map<int, ServerSocket*>& clientToServer);
 LocationConfig	matchLocation(const std::string& path, const ServerConfig& config);
 // Add function declarations to WebServ.hpp
-void		handleGet(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
-void		handlePost(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
-void		handlePut(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
-void		handleDelete(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config);
-void		handleHead(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config);
+void			handleGet(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
+void			handlePost(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
+void			handlePut(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
+void			handleDelete(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config);
+void			handleHead(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config);
 
 // Helper Functions
-void		handleClientCleanup(int fd, std::vector<pollfd>& fds, std::map<int, ClientConnection*>& clients, size_t& i);
-bool		fileExists(const std::string& path);
-bool		isDirectory(const std::string& path);
-void		createDirectoryIfNotExists(const std::string& path);
-std::string	getContentType(const std::string& path);
-std::string	generateSimpleDirectoryListing(const std::string& dirPath, const std::string& urlPath);
-void		handleSimpleUpload(const std::string& request, int client_fd, const ServerConfig& config);
-void		handleSimpleCGI(int fd, const Request& req, const std::string& path, const ServerConfig& config);
+void			handleClientCleanup(int fd, std::vector<pollfd>& fds, std::map<int, ClientConnection*>& clients, size_t& i);
+bool			fileExists(const std::string& path);
+bool			isDirectory(const std::string& path);
+void			createDirectoryIfNotExists(const std::string& path);
+std::string		getContentType(const std::string& path);
+std::string		generateSimpleDirectoryListing(const std::string& dirPath, const std::string& urlPath);
+void			handleSimpleUpload(const std::string& request, int client_fd, const ServerConfig& config);
+void			handleSimpleCGI(int fd, const Request& req, const std::string& path, const ServerConfig& config);
 
 
 // URL Rewriting (if you haven't added this yet)
-std::string	rewriteURL(const std::string& path, const ServerConfig& config, const std::string& method);
+std::string		rewriteURL(const std::string& path, const ServerConfig& config, const std::string& method);
 
 // Helper function prototypes (add these to your header file)
-bool		extractFilenameFromRequest(const std::string& request, std::string& filename);
-bool		findFileContentBoundaries(const std::string& request, const std::string& filename,
+bool			extractFilenameFromRequest(const std::string& request, std::string& filename);
+bool			findFileContentBoundaries(const std::string& request, const std::string& filename,
 							size_t& contentStart, size_t& contentEnd);
-bool		validateUploadFileSize(size_t fileSize, const ServerConfig& config);
-bool		writeFileToServer(const std::string& request, size_t contentStart, size_t contentLength,
+bool			validateUploadFileSize(size_t fileSize, const ServerConfig& config);
+bool			writeFileToServer(const std::string& request, size_t contentStart, size_t contentLength,
 					const std::string& filePath);
-std::string	loadAndProcessSuccessTemplate(const ServerConfig& config, const std::string& filename);
-std::string	loadAndProcessDeleteTemplate(const ServerConfig& config, const std::string& filename);
-void		replaceTemplateVariables(std::string& templateContent, const std::string& filename, const std::string& action);
-std::string	extractBoundary(const std::string& request);
-std::string	generateJsonDirectoryListing(const std::string& dirPath);
+std::string		loadAndProcessSuccessTemplate(const ServerConfig& config, const std::string& filename);
+std::string		loadAndProcessDeleteTemplate(const ServerConfig& config, const std::string& filename);
+void			replaceTemplateVariables(std::string& templateContent, const std::string& filename, const std::string& action);
+std::string		extractBoundary(const std::string& request);
+std::string		generateJsonDirectoryListing(const std::string& dirPath);
 
-void		handleSignal(int signal);
-void		setupSignal();
-void		showUsage();
-bool		fileExists(const std::string& path);
-bool		hasAllowedExtension(const std::string& filename);
-bool		parseArguments(int argc, char **argv, std::string &configPath);
-void		artwelcom();
-std::string	executeScript(const std::string& interpreter, const std::string& scriptPath, const Request& req);
-std::string	formatCGIResponse(const std::string& scriptOutput);
+void			handleSignal(int signal);
+void			setupSignal();
+void			showUsage();
+bool			fileExists(const std::string& path);
+bool			hasAllowedExtension(const std::string& filename);
+bool			parseArguments(int argc, char **argv, std::string &configPath);
+void			artwelcom();
+std::string		executeScript(const std::string& interpreter, const std::string& scriptPath, const Request& req);
+std::string		formatCGIResponse(const std::string& scriptOutput);
 
 // Chunked transfer functions (no class needed!)
-bool		useChunkedTransfer(const std::string& fullPath);
-bool		sendFileChunked(int fd, const std::string& fullPath, const std::string& contentType);
+bool			useChunkedTransfer(const std::string& fullPath);
+bool			sendFileChunked(int fd, const std::string& fullPath, const std::string& contentType);
+bool			sendAll(int fd, const char* buffer, size_t length);
 
 // Enhanced PUT handling functions
-void		handleFileRename(int fd, const std::string& path, const std::string& newName,
+void			handleFileRename(int fd, const std::string& path, const std::string& newName,
 	const LocationConfig& location, const ServerConfig& config);
-void		handleFileUpload(int fd, const Request& req, const std::string& path,
+void			handleFileUpload(int fd, const Request& req, const std::string& path,
 	const LocationConfig& location, const ServerConfig& config);
 
 // Enhanced multiple file upload handler
-size_t		findNextFileSection(const std::string& request, const std::string& boundary, size_t startPos);
-void		handleEnhancedUpload(const std::string& request, int client_fd, const ServerConfig& config);
-bool		extractFilenameFromSection(const std::string& request, size_t sectionStart,
+size_t			findNextFileSection(const std::string& request, const std::string& boundary, size_t startPos);
+void			handleEnhancedUpload(const std::string& request, int client_fd, const ServerConfig& config);
+bool			extractFilenameFromSection(const std::string& request, size_t sectionStart,
 	size_t sectionEnd, std::string& filename);
-bool		findFileContentInSection(const std::string& request, size_t sectionStart,
+bool			findFileContentInSection(const std::string& request, size_t sectionStart,
 		size_t sectionEnd, size_t& contentStart, size_t& contentLength);
 std::string		generateSimpleUploadResponse(const std::vector<std::string>& successFiles,
 			const std::vector<std::string>& failedFiles);

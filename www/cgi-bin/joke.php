@@ -52,7 +52,7 @@ $random_fact = $fun_facts[array_rand($fun_facts)];
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>😂 PHP Joke Generator</title>
+	<title>PHP Joke Generator</title>
 	<style>
 		* {
 			margin: 0;

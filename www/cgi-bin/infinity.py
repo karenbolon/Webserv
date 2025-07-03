@@ -4,4 +4,4 @@ import time
 
 print("Content-Type: text/html\n")
 while True:
-    time.sleep(1)
+	time.sleep(1)

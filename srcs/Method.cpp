@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Method.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/06/30 18:17:26 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/03 03:25:38 by kellen           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,7 @@ void handleGet(int fd, const Request& req, const std::string& path, const Locati
 
 	// First: Check if this is a CGI request FIRST (highest priority)
 	if (path.find("/cgi-bin/") == 0) {
-		
+
 		// Call our improved handleSimpleCGI function
 		handleSimpleCGI(fd, req, path, config);
 		return;
@@ -762,7 +762,7 @@ std::string executeScript(const std::string& interpreter, const std::string& scr
 
 		if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
 			std::cout << "✅ Script executed successfully" << std::endl;
-		} 
+		}
 		else {
 			std::cout << "⚠️ Script exited with status: " << WEXITSTATUS(status) << std::endl;
 		}
