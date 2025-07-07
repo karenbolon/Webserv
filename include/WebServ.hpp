@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   WebServ.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/07/03 21:17:25 by kellen           ###   ########.fr       */
+/*   Updated: 2025/07/07 17:12:48 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,8 +79,8 @@ std::string	buildHtmlResponse(int code, const std::string& body);
 bool		validatePort(const std::string& portString);
 void		convertListenEntriesToPortsAndHost(ServerConfig& server);
 void 		checkDuplicateHostPortPairs(const std::vector<ServerConfig>& servers);
-void		runEventLoop(std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket,
-				std::map<int, ClientConnection*>& clients, std::map<int, ServerSocket*>& clientToServer);
+void		runEventLoop(std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket, std::map<int, ClientConnection*>& clients,
+				std::map<int, ServerSocket*>& clientToServer);
 bool 		initialiseSockets(const std::vector<ServerConfig>& servers, std::vector<ServerSocket*>& serverSockets,
 				std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket);
 void		handleExistingClient(int fd, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, size_t& i,
@@ -89,23 +89,23 @@ void		handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, std::map<i
 				std::map<int, ServerSocket*>& clientToServer);
 LocationConfig	matchLocation(const std::string& path, const ServerConfig& config);
 // Add function declarations to WebServ.hpp
-bool		handleGet(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
-bool		handlePost(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
+bool 		handleGet(ClientConnection* client, int fd, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
+bool		handlePost(ClientConnection* client, int fd, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
 void		handlePut(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config);
 void		handleDelete(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config);
 bool		handleHead(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config);
 bool		handleRedirect(int fd, const LocationConfig& location, const ServerConfig& config);
 
 // Helper Functions
-void		handleClientCleanup(int fd, std::vector<pollfd>& fds, std::map<int, ClientConnection*>& clients, size_t& i);
+void 		handleClientCleanup(int fd, std::vector<pollfd>& fds,
+				std::map<int, ClientConnection*>& clients, size_t& i);
 bool		fileExists(const std::string& path);
 bool		isDirectory(const std::string& path);
 void		createDirectoryIfNotExists(const std::string& path);
 std::string	getContentType(const std::string& path);
 std::string	generateSimpleDirectoryListing(const std::string& dirPath, const std::string& urlPath);
 void		handleSimpleUpload(const std::string& request, int client_fd, const ServerConfig& config);
-bool		handleSimpleCGI(int fd, const Request& req, const std::string& path, const ServerConfig& config);
-
+bool 		handleSimpleCGI(ClientConnection* client, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const ServerConfig& config);
 
 // URL Rewriting (if you haven't added this yet)
 std::string	rewriteURL(const std::string& path, const ServerConfig& config, const std::string& method);
@@ -130,7 +130,6 @@ bool		fileExists(const std::string& path);
 bool		hasAllowedExtension(const std::string& filename);
 bool		parseArguments(int argc, char **argv, std::string &configPath);
 void		artwelcom();
-std::string	executeScript(const std::string& interpreter, const std::string& scriptPath, const Request& req);
 std::string	formatCGIResponse(const std::string& scriptOutput);
 
 // Chunked transfer functions (no class needed!)
@@ -147,10 +146,17 @@ void		handleFileUpload(int fd, const Request& req, const std::string& path,
 size_t		findNextFileSection(const std::string& request, const std::string& boundary, size_t startPos);
 void		handleEnhancedUpload(const std::string& request, int client_fd, const ServerConfig& config);
 bool		extractFilenameFromSection(const std::string& request, size_t sectionStart,
-	size_t sectionEnd, std::string& filename);
+				size_t sectionEnd, std::string& filename);
 bool		findFileContentInSection(const std::string& request, size_t sectionStart,
-		size_t sectionEnd, size_t& contentStart, size_t& contentLength);
-std::string		generateSimpleUploadResponse(const std::vector<std::string>& successFiles,
-			const std::vector<std::string>& failedFiles);
+				size_t sectionEnd, size_t& contentStart, size_t& contentLength);
+std::string	generateSimpleUploadResponse(const std::vector<std::string>& successFiles,
+				const std::vector<std::string>& failedFiles);
+
+void 		processClientRequest(int fd, std::vector<struct pollfd>& fds,
+				std::map<int, ClientConnection*>& clients, std::map<int, ServerSocket*>& clientToServer, size_t& i);
+bool		methodAllowed(const std::string& method, const std::vector<std::string>& allowed);
+void		removePollFd(std::vector<pollfd>& fds, int fd);
+bool		setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const std::string& interpreter, const std::string& scriptPath,
+				const Request& req);
 
 #endif // WEBSERV_HPP

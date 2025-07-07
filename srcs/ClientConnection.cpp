@@ -3,16 +3,18 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/24 02:56:32 by kellen           ###   ########.fr       */
+/*   Updated: 2025/07/07 14:56:33 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "WebServ.hpp"
 
-ClientConnection::ClientConnection(int fd) : _fd(fd) {
+
+ClientConnection::ClientConnection(int fd) 
+	: _fd(fd), _cgiInputFd(-1), _cgiOutputFd(-1), _cgiPid(0), _cgiDone(false), _requestReady(false), _cgiRunning(false) {
 	int flags = fcntl(_fd, F_GETFL, 0);
 	if (!(flags & O_NONBLOCK))
 		fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
@@ -22,9 +24,28 @@ int	ClientConnection::getFd() const {
 	return _fd;
 }
 
+int	ClientConnection::getCgiInputFd() const {
+	return _cgiInputFd;
+}
+
+int	ClientConnection::getCgiOutputFd() const {
+	return _cgiOutputFd;
+}
+
+
 void	ClientConnection::closeConnection() {
-	if (_fd != -1)
+	if (_fd != -1) {
 		close(_fd);
+		_fd = -1;
+	}
+	if (_cgiInputFd != -1) {
+		close(_cgiInputFd);
+		_cgiInputFd = -1;
+	}
+	if (_cgiOutputFd != -1) {
+		close(_cgiOutputFd);
+		_cgiOutputFd = -1;
+	}
 }
 
 ClientConnection::~ClientConnection() {
@@ -95,4 +116,68 @@ bool ClientConnection::isRequestComplete() const {
 
 std::string ClientConnection::getRawRequest() const {
 	return std::string(_buffer.begin(), _buffer.end());
+}
+
+void	ClientConnection::setCgiFds(int inputFd, int outputFd) {
+	_cgiInputFd = inputFd;
+	_cgiOutputFd = outputFd;
+}
+
+void	ClientConnection::setCgiPid(pid_t pid) {
+	_cgiPid = pid;
+	_cgiStartTime = time(NULL);
+}
+
+void	ClientConnection::markCgiRunning() {
+	_cgiRunning = true;
+	_cgiDone = false;
+}
+
+void	ClientConnection::markCgiDone() {
+	_cgiRunning = false;
+	_cgiDone = true;
+}
+
+bool ClientConnection::isCgiRunning() const {
+	return _cgiRunning;
+}
+
+bool ClientConnection::isCgiDone() const {
+	return _cgiDone;
+}
+
+std::string&	ClientConnection::getCgiInputBuffer() {
+	return _cgiInputBuffer;
+}
+
+std::string&	ClientConnection::getCgiOutputBuffer() {
+	return _cgiOutputBuffer;
+}
+
+void ClientConnection::appendToCgiOutput(const char* data, size_t len) {
+	_cgiOutputBuffer.append(data, len);
+}
+
+void ClientConnection::consumeCgiInput(size_t bytes) {
+	_cgiInputBuffer.erase(0, bytes);
+}
+
+bool	ClientConnection::cgiInputBufferEmpty() const {
+	return _cgiInputBuffer.empty();
+}
+
+time_t ClientConnection::getCgiStartTime() const {
+	return _cgiStartTime;
+}
+
+pid_t  ClientConnection::getCgiPid() const {
+	return _cgiPid;
+}
+
+void ClientConnection::markRequestReady() {
+	_requestReady = true;
+}
+
+bool ClientConnection::hasRequestReady() const {
+	return _requestReady;
 }

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ServerSocket.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:37 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/12 00:36:34 by kellen           ###   ########.fr       */
+/*   Updated: 2025/07/07 13:26:30 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -112,6 +112,6 @@ void	ServerSocket::closeSocket() {
 	}
 }
 
-int		ServerSocket::getFD() {
+int		ServerSocket::getFd() {
 	return _fd;
 }

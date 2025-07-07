@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   initSocket.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/04 19:52:56 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/07 17:16:57 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,7 +30,7 @@ bool initialiseSockets(const std::vector<ServerConfig>& servers, std::vector<Ser
 				continue;
 			}
 			server->setConfig(servers[i]);
-			int	fd = server->getFD();
+			int	fd = server->getFd();
 			struct pollfd pfd;
 			pfd.fd = fd;
 			pfd.events = POLLIN;
@@ -44,6 +44,16 @@ bool initialiseSockets(const std::vector<ServerConfig>& servers, std::vector<Ser
 	if (serverSockets.empty())
 		return false;
 	return true;
+}
+
+ClientConnection* findClientByFd(std::map<int, ClientConnection*>& clients, int fd) {
+	for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it) {
+		if (it->second->getFd() == fd ||
+			it->second->getCgiInputFd() == fd ||
+			it->second->getCgiOutputFd() == fd)
+			return it->second;
+	}
+	return NULL;
 }
 
 /*
@@ -72,24 +82,160 @@ void	runEventLoop(	std::vector<struct pollfd>& fds,
 
 			if (tempRevent & (POLLERR | POLLHUP | POLLNVAL)) {
 				std::cerr << "❌ Error or hangup on client side: " << fd << std::endl;
-				close(fd);
-				fds.erase(fds.begin() + i);
-				--i;
+				handleClientCleanup(fd, fds, clients, i);
 				continue;
 			}
-			if (tempRevent & POLLIN) {
-				if (fdToSocket.count(fd))
-					handleNewClient(fdToSocket[fd], fds, clients, clientToServer);
-				else if (clients.count(fd))
-					handleExistingClient(fd, fds, clients, i, clientToServer[fd]->getConfig());
-				else {
-					std::cerr << "⚠️ POLLIN on unknown fd " << fd << std::endl;
+			if (fdToSocket.count(fd)) {
+				//server socket is ready to accept new client
+				handleNewClient(fdToSocket[fd], fds, clients, clientToServer);
+				continue;
+			}
+			
+			ClientConnection* client = findClientByFd(clients,fd);
+			if (!client)
+				continue;
+			
+			//handle CGI stdout (ready to read)
+			if (tempRevent & POLLIN && fd == client->getCgiOutputFd()) {
+				char buf[4096];
+				ssize_t n = read(fd, buf, sizeof(buf));
+				if (n > 0)
+					client->appendToCgiOutput(buf, n);
+				else if (n == 0) {
 					close(fd);
-					fds.erase(fds.begin() + i);
-					--i;
+					//mark output closed
+					client->setCgiFds(client->getCgiInputFd(), -1);
+				}
+			}
+			//handle CGU stdin (ready to write)	
+			if (tempRevent & POLLOUT && fd == client->getCgiInputFd()) {
+				std::string& body = client->getCgiInputBuffer();
+				ssize_t sent = write(fd, body.c_str(), body.size());
+				if (sent == 0)
+					continue;
+				if (sent == -1) {
+					handleClientCleanup(fd, fds, clients, i);
+					continue;
+				}
+				client->consumeCgiInput(sent);
+				if (client->cgiInputBufferEmpty()) {
+					close(fd);
+					//mark input closed
+					client->setCgiFds(-1, client->getCgiOutputFd());
+				}
+
+				//handle CGI timeout and process end
+				if (client->isCgiRunning()) {
+					int status;
+					pid_t	result = waitpid(client->getCgiPid(), &status, WNOHANG);
+					if (result == client->getCgiPid())
+						client->markCgiDone();
+					if (time(NULL) - client->getCgiStartTime() > 5) {
+						std::cerr << "⏰ CGI timeout on fd " << fd << ", killing 🔪🩸😵\n\n";
+						kill(client->getCgiPid(), SIGKILL);
+						client->markCgiDone();
+					}
+				}
+				//CGI is finished, we need to send the output
+				if (client->isCgiDone() && client->getCgiOutputFd() == -1) {
+					std::string response = formatCGIResponse(client->getCgiOutputBuffer());
+					safeSend(client->getFd(), response);
+					handleClientCleanup(fd, fds, clients, i);
+					continue;
+				}
+				//back to dealing with normal sockets (non-CGI)
+				if (tempRevent & POLLIN && fd == client->getFd()) {
+					const	ServerConfig& serverConfig = clientToServer[fd]->getConfig();
+				
+					int recvResult = client->recvFullRequest(fd, serverConfig);
+					if (recvResult <= 0) {
+						handleClientCleanup(fd, fds, clients, i);
+						continue;
+					}
+					if (client->isRequestComplete()) {
+						processClientRequest(fd, fds, clients, clientToServer, i);
+					}
 				}
 			}
 		}
+	}
+}
+
+bool	methodAllowed(const std::string& method, const std::vector<std::string>& allowed) {
+	for (size_t i = 0; i < allowed.size(); ++i) {
+		if (allowed[i] == method)
+			return true;
+	}
+	return false;
+}
+
+void processClientRequest(int fd,
+	std::vector<struct pollfd>& fds,
+	std::map<int, ClientConnection*>& clients,
+	std::map<int, ServerSocket*>& clientToServer, size_t& i)
+{
+	ClientConnection* client = clients[fd];
+	std::string raw = client->getRawRequest();
+
+	Request req(raw);
+	std::string method = req.getMethod();
+	std::string path = req.getPath();
+
+	const ServerConfig& config = clientToServer[fd]->getConfig();
+	LocationConfig location = matchLocation(path, config);
+
+	// Check if method is allowed
+	if (!methodAllowed(method, location.methods)) {
+		std::string body = getErrorPageBody(405, config);
+		sendHtmlResponse(fd, 405, body); // ⚠️ make sure this checks POLLOUT
+		handleClientCleanup(fd, fds, clients, i);
+		return;
+	}
+
+	// Check redirect
+	if (!location.redirect.empty()) {
+		//std::cout << "🔄 Found redirect for " << path << " -> " << location.redirect << std::endl;
+
+		int statusCode = 302; // Default temporary redirect
+
+		if (location.returnStatusCode >= 300 && location.returnStatusCode < 400) {
+			statusCode = location.returnStatusCode;
+			std::cout << "   Using specified status code: " << statusCode << std::endl;
+		} else {
+			std::cout << "   Using default status code: " << statusCode << " (temporary redirect)" << std::endl;
+		}
+
+		std::ostringstream response;
+		response << "HTTP/1.1 " << statusCode << " " << HttpStatus::getStatusMessages(statusCode) << "\r\n";
+		response << "Location: " << location.redirect << "\r\n";
+		response << "Connection: close\r\n";
+		response << "\r\n";
+
+		std::string responseStr = response.str();
+		std::cout << "Sending redirect response:\n" << responseStr << std::endl;
+
+		ssize_t sent = send(fd, responseStr.c_str(), responseStr.size(), 0);  // Or whatever your send function was
+		if (sent == 0)
+			return;
+		if (sent == -1) {
+			std::cerr << "❌ Failed to send redirect response on fd " << fd << std::endl;
+			handleClientCleanup(fd, fds, clients, i);
+			return;
+		}
+}
+
+	// Route to correct handler
+	if (method == "GET") {
+		handleGet(client, fd, fds, req, path, location, config);
+	} else if (method == "POST") {
+		// This may become setupCGI() call
+		handlePost(client, fd, fds, req, path, location, config);
+	} else if (method == "DELETE") {
+		handleDelete(fd, path, location, config);
+	} else {
+		std::string body = getErrorPageBody(501, config);
+		sendHtmlResponse(fd, 501, body);
+		handleClientCleanup(fd, fds, clients, i);
 	}
 }
 
@@ -97,12 +243,15 @@ void	runEventLoop(	std::vector<struct pollfd>& fds,
 Accepts a new client connection, creates a new ClientConnection object to manage communication,
 sets up a pollfd struct for the client, and adds it to the poll list.
 */
-void	handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, std::map<int, ServerSocket*>& clientToServer) {
+void	handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, 
+			std::map<int, ClientConnection*>& clients, std::map<int, ServerSocket*>& clientToServer) {
+
 	int	client_fd = server->acceptClient();
 	if (client_fd == -1) {
 		std::cerr << "❌ Failed to accept client\n";
 		return;
 	}
+	
 	ClientConnection* client = new ClientConnection(client_fd);
 	pollfd client_pfd;
 	client_pfd.fd = client_fd;
@@ -124,13 +273,13 @@ void handleExistingClient(int fd, std::vector<pollfd> &fds,
 	const ServerConfig& config)
 {
 
-	std::map<int, ClientConnection*>::iterator it = clients.find(fd);
+	/*std::map<int, ClientConnection*>::iterator it = clients.find(fd);
 	if (it == clients.end()) {
 		std::cerr << "❌ Unknown client fd: " << fd << std::endl;
 		return;
-	}
+	}*/
 
-	ClientConnection* client = it->second;
+	ClientConnection* client = clients[fd];
 
 	try {
 		// Read data from client
@@ -142,129 +291,13 @@ void handleExistingClient(int fd, std::vector<pollfd> &fds,
 
 		// Check if request is complete
 		if (!client->isRequestComplete()) {
-			return; // Wait for more data
+			client->markRequestReady();
+			//return; // Wait for more data
 		}
 
-		std::string request = client->getRawRequest();
-		if (request.empty()) {
-			std::cout << "⚠️ Empty request received" << std::endl;
-			handleClientCleanup(fd, fds, clients, i);
-			return;
-		}
-
-		// Parse request
-		Request req(request);
-		std::string method = req.getMethod();
-		std::string path = req.getPath();
-
-//		std::cout << "📨 " << method << " " << path << std::endl;
-
-		// URL rewriting for clean URLs - BUT NOT FOR POST UPLOADS
-		std::string actualPath = path;
-		if (method == "GET") {
-			actualPath = rewriteURL(path, config, method);
-			if (actualPath != path) {
-//				std::cout << "🔄 URL rewrite: " << path << " → " << actualPath << std::endl;
-				path = actualPath;
-			}
-		} //else {
-			// For POST, PUT, DELETE - keep original path
-			//std::cout << "📌 Keeping original path for " << method << ": " << path << std::endl;
-		//}
-		// std::string actualPath = rewriteURL(path, config);
-		// if (actualPath != path) {
-		// 	std::cout << "🔄 URL rewrite: " << path << " → " << actualPath << std::endl;
-		// 	path = actualPath;
-		// }
-
-		// Find matching location
-		LocationConfig location = matchLocation(path, config);
-
-		// 🔄 CHECK FOR REDIRECTS FIRST (before method validation)
-		if (!location.redirect.empty()) {
-			std::cout << "🔄 Found redirect for " << path << " -> " << location.redirect << std::endl;
-
-			// Determine the correct status code
-			int statusCode = 302; // Default to 302 (temporary redirect)
-
-			// If return status code is specified and it's a 3xx redirect code, use it
-			if (location.returnStatusCode >= 300 && location.returnStatusCode < 400) {
-				statusCode = location.returnStatusCode;
-				std::cout << "   Using specified status code: " << statusCode << std::endl;
-			} else {
-				std::cout << "   Using default status code: " << statusCode << " (temporary redirect)" << std::endl;
-			}
-
-			// Build redirect response using your HttpStatus function
-			std::ostringstream response;
-			response << "HTTP/1.1 " << statusCode << " " << HttpStatus::getStatusMessages(statusCode) << "\r\n";
-			response << "Location: " << location.redirect << "\r\n";
-			response << "Connection: close\r\n";
-			response << "\r\n";
-
-			std::string responseStr = response.str();
-			std::cout << "Sending redirect response:\n" << responseStr << std::endl;
-
-			if (!safeSend(fd, responseStr)) {
-				handleClientCleanup(fd, fds, clients, i);
-				return;
-			}
-
-			handleClientCleanup(fd, fds, clients, i);
-			return;
-		}
-
-		// Check if method is allowed in this location
-		bool methodAllowed = false;
-		for (size_t j = 0; j < location.methods.size(); ++j) {
-			if (location.methods[j] == method) {
-				methodAllowed = true;
-				break;
-			}
-		}
-
-		if (!methodAllowed) {
-			std::cout << "❌ Method " << method << " not allowed for " << path << std::endl;
-			std::string body = getErrorPageBody(405, config); // Method Not Allowed
-			sendHtmlResponse(fd, 405, body);
-			handleClientCleanup(fd, fds, clients, i);
-			return;
-		}
-
-		// Handle different HTTP methods with CORRECT parameter order
-		if (method == "GET") {
-			// handleGET(fd, path, location, config)
-			if (!handleGet(fd, req, path, location, config)) {
-				handleClientCleanup(fd, fds, clients, i);
-			}
-		} else if (method == "POST") {
-			// handlePOST(fd, req, path, location, config)
-			if (!handlePost(fd, req, path, location, config)) {
-				handleClientCleanup(fd, fds, clients, i);
-			}
-		} else if (method == "PUT") {
-			// handlePUT(fd, req, path, location, config)
-			handlePut(fd, req, path, location, config);
-		} else if (method == "DELETE") {
-			// handleDELETE(fd, path, location, config)
-			handleDelete(fd, path, location, config);
-		} else if (method == "HEAD") {
-			// handleHEAD(fd, path, location, config)
-			if (!handleHead(fd, path, location, config)){
-				handleClientCleanup(fd, fds, clients, i);
-			}
-		} else {
-			std::cout << "❌ Method " << method << " not implemented" << std::endl;
-			std::string body = getErrorPageBody(501, config); // Not Implemented
-			sendHtmlResponse(fd, 501, body);
-		}
-
-	} catch (const std::exception& e) {
-		std::cerr << "❌ Exception handling client " << fd << ": " << e.what() << std::endl;
-		std::string errorBody = getErrorPageBody(500, config);
-		sendHtmlResponse(fd, 500, errorBody);
 	}
-
-	// Clean up client connection
-	handleClientCleanup(fd, fds, clients, i);
+	catch (const std::exception& e) {
+		std::cerr << "❌ Exception in handle existing client: " << e.what() << std::endl;
+		handleClientCleanup(fd, fds, clients, i);
+	}
 }

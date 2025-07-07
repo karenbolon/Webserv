@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:29 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/04 18:10:31 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/07 17:13:05 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,7 +57,7 @@ and starts the server using init_webserv().
 */
 int main(int ac, char **av) {
 
-	// setupSignal();
+	setupSignal();
 	std::string configPath;
 
 	if (!parseArguments(ac, av, configPath))

@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/04 17:24:41 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/07 15:29:00 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,15 +42,15 @@ const LocationConfig* findMatchingLocation(const std::string& path, const Server
 }
 
 
-bool handleSimpleCGI(int fd, const Request& req, const std::string& path, const ServerConfig& config) {
+bool handleSimpleCGI(ClientConnection* client, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const ServerConfig& config) {
 //	std::cout << "🚀 Starting Simple CGI execution for: " << path << std::endl;
 
 	// Step 1: Find the interpreter for this script
 	std::string interpreter = getInterpreter(path, config);
 	if (interpreter.empty()) {
-		std::cout << "❌ No interpreter found for " << path << std::endl;
+		std::cerr << "❌ No interpreter found for " << path << std::endl;
 		std::string errorBody = getErrorPageBody(500, config);
-		sendHtmlResponse(fd, 500, errorBody);
+		sendHtmlResponse(client->getFd(), 500, errorBody);
 		return false;
 	}
 
@@ -65,37 +65,30 @@ bool handleSimpleCGI(int fd, const Request& req, const std::string& path, const 
 
 	// Step 3: Check if the script file exists
 	if (!fileExists(scriptPath)) {
-		std::cout << "❌ Script file not found: " << scriptPath << std::endl;
+		std::cerr << "❌ Script file not found: " << scriptPath << std::endl;
 		std::string errorBody = getErrorPageBody(404, config);
-		sendHtmlResponse(fd, 404, errorBody);
+		sendHtmlResponse(client->getFd(), 404, errorBody);
 		return false;
 	}
 
 	if (access(scriptPath.c_str(), X_OK) != 0) {
-		std::cout << "⚠️ Script may not be executable, but continuing..." << std::endl;
+		std::cerr << "⚠️ Script may not be executable, but continuing..." << std::endl;
 	}
 
 	// Step 4: Execute the script and capture output
-	std::string scriptOutput = executeScript(interpreter, scriptPath, req);
-
-	if (scriptOutput.empty()) {
-		std::cout << "❌ Script execution failed or returned empty output" << std::endl;
+	if (!setUpCgi(client, fds, interpreter, scriptPath, req)) {
+		std::cerr << "❌ Failed to set up CGI execution for: " << scriptPath << std:: endl;
 		std::string errorBody = getErrorPageBody(500, config);
-		sendHtmlResponse(fd, 500, errorBody);
+		safeSend(client->getFd(), errorBody);
 		return false;
 	}
 
-	// Step 5: Send the script output directly to the client
-	if (!safeSend(fd, scriptOutput)) {
-		return false;
-	}
 	return true;
 }
 
-// Helper function to execute the script
-std::string executeScript(const std::string& interpreter, const std::string& scriptPath, const Request& req) {
+bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const std::string& interpreter, const std::string& scriptPath,
+				const Request& req) {
 
-	// Create pipes for communication
 	int outputPipe[2];
 	int inputPipe[2];
 
@@ -112,12 +105,11 @@ std::string executeScript(const std::string& interpreter, const std::string& scr
 		close(outputPipe[1]);
 		close(inputPipe[0]);
 		close(inputPipe[1]);
-		return "";
+		return false;
 	}
 
 	if (pid == 0) {
 		// Child process: execute the script
-//		std::cout << "👶 Child process: executing script" << std::endl;
 
 		// Redirect stdin and stdout
 		dup2(inputPipe[0], STDIN_FILENO);
@@ -192,7 +184,33 @@ std::string executeScript(const std::string& interpreter, const std::string& scr
 		close(inputPipe[0]);
 		close(outputPipe[1]);
 
-		// Send POST data to script if any
+		fcntl(inputPipe[1], F_SETFL, O_NONBLOCK);
+		fcntl(outputPipe[0], F_SETFL, O_NONBLOCK);
+
+		client->setCgiFds(inputPipe[1], outputPipe[0]);
+		client->setCgiPid(pid);
+		client->markCgiRunning();
+
+		// Add to pollfds
+		struct pollfd outPoll;
+		struct pollfd inPoll;
+		
+		outPoll.fd = outputPipe[0];
+		outPoll.events = POLLIN;
+		outPoll.revents = 0;
+
+		inPoll.fd = inputPipe[1];
+		inPoll.events = POLLOUT;
+		inPoll.revents = 0;
+		
+		fds.push_back(outPoll);
+		fds.push_back(inPoll);
+
+		return true;
+	}
+				}
+
+/*		// Send POST data to script if any
 		std::string body = req.getBody();
 		if (!body.empty() && req.getMethod() == "POST") {
 //			std::cout << "📤 Sending POST data to script (" << body.size() << " bytes)" << std::endl;
@@ -250,7 +268,7 @@ std::string executeScript(const std::string& interpreter, const std::string& scr
 		// Format the output as a proper HTTP response
 		return formatCGIResponse(output);
 	}
-}
+}*/
 
 // Helper function to format CGI output as HTTP response
 std::string formatCGIResponse(const std::string& scriptOutput) {

@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/04 16:48:16 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/07 13:52:47 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -316,18 +316,36 @@ LocationConfig matchLocation(const std::string& path, const ServerConfig& config
 void handleClientCleanup(int fd, std::vector<pollfd>& fds,
 		std::map<int, ClientConnection*>& clients, size_t& i) {
 	// Remove from clients map
-	std::map<int, ClientConnection*>::iterator it = clients.find(fd);
-	if (it != clients.end()) {
-		delete it->second;
-		clients.erase(it);
-	}
-
-	// Close socket
+	
+	ClientConnection* client = clients[fd];
+	
+	// Track CGI fds before erasing client
+	int cgiInputFd = client->getCgiInputFd();
+	int cgiOutputFd = client->getCgiOutputFd();
+	
+	delete client;
+	clients.erase(fd);
 	close(fd);
-
+	
 	// Remove from poll fds
 	fds.erase(fds.begin() + i);
 	--i;
+
+	// Remove CGI fds from pollfds if present
+	if (cgiInputFd != -1)
+		removePollFd(fds, cgiInputFd);
+	if (cgiOutputFd != -1)
+		removePollFd(fds, cgiOutputFd);
+}
+
+void removePollFd(std::vector<pollfd>& fds, int fd) {
+	for (size_t i = 0; i <fds.size(); ++i) {
+		if (fds[i].fd == fd) {
+			close(fd);
+			fds.erase(fds.begin() + i);
+			break;
+		}
+	}
 }
 
 std::string generateJsonDirectoryListing(const std::string& dirPath) {

@@ -6,20 +6,20 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/04 15:56:56 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/07 15:48:02 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "WebServ.hpp"
 
-bool handleGet(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+bool handleGet(ClientConnection* client, int fd, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
 	std::cout << "📥 Handling GET request for " << path << std::endl;
 
 	// First: Check if this is a CGI request FIRST (highest priority)
 	if (path.find("/cgi-bin/") == 0) {
 
 		// Call our improved handleSimpleCGI function
-		if (!handleSimpleCGI(fd, req, path, config)) {
+		if (!handleSimpleCGI(client, fds, req, path, config)) {
 			return false;
 		}
 		return true;
@@ -72,7 +72,7 @@ bool handleGet(int fd, const Request& req, const std::string& path, const Locati
 	return true;
 }
 
-bool handlePost(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+bool handlePost(ClientConnection* client, int fd, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
 	std::cout << "📤 Handling POST request for " << path << std::endl;
 
 	(void)location; // Suppress unused warning, as location is not used in this example
@@ -95,7 +95,7 @@ bool handlePost(int fd, const Request& req, const std::string& path, const Locat
 	if (path.find("/cgi-bin/") == 0) {
 		std::cout << "🔧 This is a CGI POST request, calling handleSimpleCGI" << std::endl;
 		// Simple CGI execution - you can expand this
-		if (!handleSimpleCGI(fd, req, path, config)){
+		if (!handleSimpleCGI(client, fds, req, path, config)){
 			return false;
 		}
 	}
