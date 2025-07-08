@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 15:09:01 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 20:59:35 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -153,14 +153,8 @@ bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
             const_cast<char*>(scriptPath.c_str()),
             NULL
         };
-		std::cerr << "⚡ CGI child starting execve\n";
-        std::cerr << "About to execve:\nInterpreter: " << interpreter << "\nScript: " << scriptPath << "\n";
-        //for (int i = 0; args[i]; ++i)
-        //    std::cerr << "  args[" << i << "]: " << args[i] << "\n";
 
-        int ret = execve(interpreter.c_str(), args, &envp[0]);
-        std::cerr << "❌ execve failed, ret=" << ret << ", errno=" << errno << "\n";
-        perror("execve failed");
+        execve(interpreter.c_str(), args, &envp[0]);
         _exit(1);
     } else {
         // Parent process
@@ -201,8 +195,12 @@ bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
 // Helper function to format CGI output as HTTP response
 std::string formatCGIResponse(const std::string& scriptOutput) {
 	if (scriptOutput.empty()) {
-		std::cout << "⚠️ Script output is empty" << std::endl;
-		return "";
+		return "HTTP/1.1 500 Internal Server Error\r\n"
+               "Content-Type: text/html\r\n"
+               "Content-Length: 49\r\n"
+               "Connection: close\r\n"
+               "\r\n"
+               "<html><body><h1>500 Internal Server Error</h1></body></html>";
 	}
 
 //	std::cout << "📋 Formatting CGI response (" << scriptOutput.size() << " bytes)" << std::endl;

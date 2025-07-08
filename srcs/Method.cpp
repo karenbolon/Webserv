@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/08 17:15:16 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 20:44:23 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -385,14 +385,11 @@ void handleDelete(const std::string& path, const LocationConfig& location, const
 	sendHtmlResponse(200, responseBody, client, fds); // 200 OK
 }
 
-bool handleHead(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config, ClientConnection* client, std::vector<struct pollfd>& fds) {
+bool handleHead(int fd, const std::string& path, const LocationConfig& location, ClientConnection* client, std::vector<struct pollfd>& fds) {
 	std::cout << "📋 Handling HEAD request for " << path << std::endl;
-	//for now
-	(void)config;  // Add this line to suppress warning
 
 	// HEAD is like GET but without the response body
 	std::string fullPath = location.root + path;
-	std::cout << "DEBUG: fullPath = '" << fullPath << "'" << std::endl;
 
 	if (!fileExists(fullPath)) {
 		// Send 404 headers only (no body)
@@ -420,7 +417,6 @@ bool handleHead(int fd, const std::string& path, const LocationConfig& location,
 
 	size_t fileSize = file.tellg();
 	file.close();
-	std::cerr << "in method function close 3\n";
 
 	// Determine content type
 	std::string contentType = Response::getContentType(fullPath);

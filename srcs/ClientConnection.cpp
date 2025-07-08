@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 17:43:38 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 20:54:04 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ ClientConnection::ClientConnection(int fd)
 	: _fd(fd), _pendingSendBuffer(), _bytesSentSoFar(0), _wantsToWrite(false), 
 	_cgiInputFd(-1), _cgiOutputFd(-1), _cgiPid(-1), _cgiOutputBuffer(), 
 	_cgiInputBuffer(), _cgiStartTime(0), _cgiDone(false), _cgiRunning(false), 
-	_chunkedInProgress(false) {
+	_chunkedState(IDLE) {
 	int flags = fcntl(_fd, F_GETFL, 0);
 	if (!(flags & O_NONBLOCK))
 		fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
@@ -78,8 +78,15 @@ int ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config,
 
 	if (bytes <= 0) {
 		if (bytes == 0)
-			std::cerr << "Client disconnected cleanly\n";
+			return bytes;
 		else {
+			//bc some transfers are huge, it doesn't always mean an error, the browser
+			//could cut the connection early and the transfer will resume later
+			if (this->getChunkState() == IN_PROGRESS) {
+				std::cerr << "⚠️ Client disconnected during chunked transfer (not server error)\n";
+				this->setChunkState(ERROR);
+				return bytes;
+			}
 			std::cerr << "⚠️ Connection closed or recv failed during recvFullRequest\n";
 			std::string body = getErrorPageBody(500, config);
 			sendHtmlResponse(500, body, client, fds);
@@ -203,10 +210,40 @@ void ClientConnection::setCgiStartTime(time_t t) {
 	_cgiStartTime = t;
 }
 
-void   ClientConnection::setChunkedInProgress(bool val) {
-	_chunkedInProgress = val;
+void ClientConnection::setChunkFilePath(const std::string& path) {
+	_chunkFilePath = path;
+}
+std::string ClientConnection::getChunkFilePath() const {
+	return _chunkFilePath;
+}
+std::ifstream& ClientConnection::getChunkFileStream() {
+	return _chunkFileStream;
+}
+bool ClientConnection::openChunkFile() {
+	_chunkFileStream.open(_chunkFilePath.c_str(), std::ios::binary);
+	return _chunkFileStream.is_open();
+}
+void ClientConnection::closeChunkFile() {
+	if (_chunkFileStream.is_open())
+		_chunkFileStream.close();
 }
 
-bool   ClientConnection::isChunkedInProgress() const {
-	return _chunkedInProgress;
+void  ClientConnection::setChunkState(ChunkState state) {
+	_chunkedState = state;
+}
+
+ChunkState	ClientConnection::getChunkState() const {
+	return _chunkedState;
+}
+
+bool ClientConnection::isChunkedDone() const {
+    return _chunkedState == DONE;
+}
+
+bool ClientConnection::isChunkedError() const {
+    return _chunkedState == ERROR;
+}
+
+void ClientConnection::resetChunkedFlags() {
+    _chunkedState = IDLE;
 }
