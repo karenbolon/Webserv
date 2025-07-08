@@ -6,11 +6,28 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/08 01:32:55 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 15:43:41 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "WebServ.hpp"
+
+bool hasCGIExtension(const std::string& path, const ServerConfig& config) {
+	std::string ext = getFileExtension(path); // e.g., ".py"
+	for (size_t i = 0; i < config.locations.size(); ++i) {
+		const std::map<std::string, std::string>& cgiMap = config.locations[i].cgi_paths;
+		if (cgiMap.find(ext) != cgiMap.end())
+			return true;
+	}
+	return false;
+}
+
+std::string getFileExtension(const std::string& filename) {
+	size_t dot = filename.find_last_of('.');
+	if (dot == std::string::npos)
+		return "";
+	return filename.substr(dot);
+}
 
 bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const Request& req, 
 	const std::string& path, const LocationConfig& location, const ServerConfig& config) {
@@ -29,9 +46,26 @@ bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 	
 	// First: Check if this is a CGI request FIRST (highest priority)
 	if (path.find("/cgi-bin/") == 0) {
+		std::string fullPath = location.root + path;
 
-		// Call our improved handleSimpleCGI function
+		if (!fileExists(fullPath)) {
+			std::cout << "❌ CGI file not found: " << fullPath << std::endl;
+			std::string body = getErrorPageBody(404, config);
+			sendHtmlResponse(404, body, client, fds);
+			return false;
+		}
+
+		if (!hasCGIExtension(fullPath, config)) {
+			std::cout << "❌ CGI extension not supported: " << fullPath << std::endl;
+			std::string body = getErrorPageBody(403, config);
+			sendHtmlResponse(403, body, client, fds);
+			return false;
+		}
+
 		if (!handleSimpleCGI(client, fds, req, path, config)) {
+			std::cerr << "❌ CGI execution failed" << std::endl;
+			std::string body = getErrorPageBody(500, config);
+			sendHtmlResponse(500, body, client, fds);
 			return false;
 		}
 		return true;

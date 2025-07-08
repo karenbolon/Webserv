@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 01:29:35 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 15:36:16 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,6 @@ ClientConnection::ClientConnection(int fd)
 }
 
 ClientConnection::~ClientConnection() {
-	closeConnection();
 }
 
 int	ClientConnection::getFd() const {
@@ -52,6 +51,10 @@ size_t& ClientConnection::getBytesSentSoFar() {
 	return _bytesSentSoFar; 
 }
 
+void ClientConnection::setCgiInputBuffer(const std::string& data) {
+    _cgiInputBuffer = data;
+}
+
 void ClientConnection::clearSendState() {
     _pendingSendBuffer.clear();
     _bytesSentSoFar = 0;
@@ -67,6 +70,7 @@ void ClientConnection::clearSendState() {
 */
 int ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config, ClientConnection* client, 
 	std::vector<struct pollfd>& fds) {
+
 	//switched to vector to handle images and pdfs
 	char buffer[65536]; // 64KB buffer to speed up transfer
 	int bytes = recv(client_fd, buffer, sizeof(buffer), 0);
@@ -133,24 +137,6 @@ int	ClientConnection::getCgiInputFd() const {
 
 int	ClientConnection::getCgiOutputFd() const {
 	return _cgiOutputFd;
-}
-
-void	ClientConnection::closeConnection() {
-	if (_fd != -1) {
-		std::cerr << "in ClientConnection close\n";
-		close(_fd);
-		_fd = -1;
-	}
-	if (_cgiInputFd != -1) {
-				std::cerr << "in ClientConnection close 2\n";
-		close(_cgiInputFd);
-		_cgiInputFd = -1;
-	}
-	if (_cgiOutputFd != -1) {
-				std::cerr << "in ClientConnection close 3\n";
-		close(_cgiOutputFd);
-		_cgiOutputFd = -1;
-	}
 }
 
 void	ClientConnection::setCgiFds(int inputFd, int outputFd) {

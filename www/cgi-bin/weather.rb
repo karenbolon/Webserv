@@ -43,6 +43,7 @@ end
 
 puts '<html>'
 puts '<head>'
+puts '<link rel="stylesheet" href="/css/cgi-bin.css">'
 puts '<style>'
 puts 'body {'
 puts '  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;'
@@ -146,3 +147,5 @@ puts '<small>Last updated: ' + Time.now.strftime("%Y-%m-%d %H:%M:%S") + '</small
 puts '</div>'
 puts '</body>'
 puts '</html>'
+
+$stdout.flush

@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:30 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 01:19:38 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 15:36:19 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,8 @@ class ClientConnection {
     //for non-blocking send
     std::string       _pendingSendBuffer;
     size_t            _bytesSentSoFar;
-    bool               _wantsToWrite;
+    bool              _wantsToWrite;
+   
     
     //CGI
     int               _cgiInputFd;
@@ -49,6 +50,7 @@ class ClientConnection {
     std::vector<char>&  getBuffer();
 
     //non-blocking send
+    void              setCgiInputBuffer(const std::string& data);
     void              setPendingResponse(const std::string& response);
     bool              wantsToWrite() const;
     std::string&      getPendingSendBuffer();
@@ -62,7 +64,6 @@ class ClientConnection {
     //CGI
     int               getCgiOutputFd() const;
     int               getCgiInputFd() const;
-    void              closeConnection();
     void              setCgiFds(int input, int outputFd);
     void              setCgiPid(pid_t pid);
     void              markCgiRunning();
@@ -76,7 +77,7 @@ class ClientConnection {
     void              consumeCgiInput(size_t bytes);
     bool              cgiInputBufferEmpty() const;
     time_t            getCgiStartTime() const;
-   void               setCgiStartTime(time_t t);
+    void              setCgiStartTime(time_t t);
      
     std::string	      getRawRequest() const;
     

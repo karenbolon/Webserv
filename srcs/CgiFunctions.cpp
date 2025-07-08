@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 02:14:55 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 15:09:01 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,147 +90,6 @@ bool handleSimpleCGI(ClientConnection* client, std::vector<struct pollfd>& fds, 
 	return true;
 }
 
-/*
-bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const std::string& interpreter, const std::string& scriptPath,
-				const Request& req) {
-
-	int outputPipe[2];
-	int inputPipe[2];
-
-	if (pipe(outputPipe) == -1 || pipe(inputPipe) == -1) {
-		std::cerr << "❌ Failed to create pipes" << std::endl;
-		return false;
-	}
-
-	// Fork a new process
-	pid_t pid = fork();
-	if (pid < 0) {
-		std::cerr << "❌ Fork failed" << std::endl;
-		close(outputPipe[0]); close(outputPipe[1]);
-		std::cerr << "debug in kid\n";
-		close(inputPipe[0]); close(inputPipe[1]);
-		std::cerr << "debug in kid 2\n";
-		return false;
-	}
-
-	if (pid == 0) {
-		// Child process: execute the script
-
-		// Redirect stdin and stdout
-		dup2(inputPipe[0], STDIN_FILENO);
-		dup2(outputPipe[1], STDOUT_FILENO);
-
-		// Close unused pipe ends
-		close(outputPipe[0]); close(outputPipe[1]);
-		close(inputPipe[0]); close(inputPipe[1]);
-
-		// Prepare environment variables
-		std::vector<std::string> envStrings;
-		envStrings.push_back("REQUEST_METHOD=" + req.getMethod());
-		envStrings.push_back("QUERY_STRING=" + req.getQuery());
-		envStrings.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
-		envStrings.push_back("CONTENT_LENGTH=" + intToStr(req.getBody().length()));
-		envStrings.push_back("GATEWAY_INTERFACE=CGI/1.1");
-		envStrings.push_back("SERVER_PROTOCOL=HTTP/1.1");
-		envStrings.push_back("SCRIPT_NAME=" + scriptPath);
-		if (scriptPath.find(".php") != std::string::npos) {
-			envStrings.push_back("SCRIPT_FILENAME=" + scriptPath);
-			envStrings.push_back("REDIRECT_STATUS=200");
-		}
-
-		// HTTP headers
-		const std::map<std::string, std::string>& headers = req.getHeaders();
-		for (std::map<std::string, std::string>::const_iterator it = headers.begin();
-			it != headers.end(); ++it) {
-
-			std::string httpVar = "HTTP_";  // Start with HTTP_ prefix only
-			// Transform the header name: hyphens to underscores, all uppercase
-			for (size_t i = 0; i < it->first.length(); ++i) {
-				char c = it->first[i];
-				if (c == '-') {
-					httpVar += '_';
-				} else {
-					httpVar += std::toupper(static_cast<unsigned char>(c));
-				}
-			}
-
-			std::string envVar = httpVar + "=" + it->second;
-			envStrings.push_back(envVar);
-					std::vector<char*> envp;
-		}
-
-			//std::cout << "✅ Added env var: " << envVar << std::endl;  // Debug output
-		}
-
-		// Convert to char* array for execve
-		std::vector<char*> envp;
-		for (size_t i = 0; i < envStrings.size(); ++i) {
-			envp.push_back(const_cast<char*>(envStrings[i].c_str()));
-		}
-		envp.push_back(NULL);
-
-		// Prepare command arguments
-		char* args[] = {
-			const_cast<char*>(interpreter.c_str()),
-			const_cast<char*>(scriptPath.c_str()),
-			NULL
-		};
-		std::cerr << "Envp:" << std::endl;
-		for (size_t i = 0; i < envp.size() - 1; ++i) {
-    		std::cerr << "[" << i << "]: " << (envp[i] ? envp[i] : "NULL") << std::endl;
-		}
-		std::cerr << "About to execve:\n";
-		std::cerr << "Interpreter: " << interpreter << "\n";
-		std::cerr << "Script: " << scriptPath << "\n";
-		std::cerr << "Args:\n";
-		for (int i = 0; args[i] != NULL; ++i)
-			std::cerr << "  args[" << i << "]: " << args[i] << "\n";
-		std::cerr << "Envp:\n";
-		for (size_t i = 0; i < envp.size(); ++i)
-    		std::cerr << "  envp[" << i << "]: " << envp[i] << "\n";
-		int ret = execve(interpreter.c_str(), args, &envp[0]);
-
-		// If we reach here, execve failed
-		std::cerr << "❌ execve failed"<< std::endl;
-		std::cerr << "After execve , ret=" << ret << ", errno=" << errno << std::endl;
-		//_exit(1) avoids flushin parent buffers and causing undefined behavior after fork
-		perror("execve failed");
-		std::cerr << "About to exit\n" ;
-		_exit(1);
-	} else {
-		// Parent process: read the output
-//		std::cout << "👨‍👩‍👧‍👦 Parent process: reading script output" << std::endl;
-		// Close unused pipe ends
-		close(inputPipe[0]);
-		close(outputPipe[1]);
-
-		fcntl(inputPipe[1], F_SETFL, O_NONBLOCK);
-		fcntl(outputPipe[0], F_SETFL, O_NONBLOCK);
-
-		client->setCgiFds(inputPipe[1], outputPipe[0]);
-		client->setCgiPid(pid);
-		client->markCgiRunning();
-		client->setCgiStartTime(time(NULL)); //to track for timeout
-
-		// Add to pollfds
-		struct pollfd outPoll, inPoll;
-		
-		outPoll.fd = outputPipe[0];
-		outPoll.events = POLLIN;
-		outPoll.revents = 0;
-
-		inPoll.fd = inputPipe[1];
-		inPoll.events = POLLOUT;
-		inPoll.revents = 0;
-		
-		fds.push_back(outPoll);
-		fds.push_back(inPoll);
-
-		return true;
-	}
-}
-*/
-
 bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
               const std::string& interpreter, const std::string& scriptPath,
               const Request& req) {
@@ -294,10 +153,10 @@ bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
             const_cast<char*>(scriptPath.c_str()),
             NULL
         };
-
+		std::cerr << "⚡ CGI child starting execve\n";
         std::cerr << "About to execve:\nInterpreter: " << interpreter << "\nScript: " << scriptPath << "\n";
-        for (int i = 0; args[i]; ++i)
-            std::cerr << "  args[" << i << "]: " << args[i] << "\n";
+        //for (int i = 0; args[i]; ++i)
+        //    std::cerr << "  args[" << i << "]: " << args[i] << "\n";
 
         int ret = execve(interpreter.c_str(), args, &envp[0]);
         std::cerr << "❌ execve failed, ret=" << ret << ", errno=" << errno << "\n";
@@ -317,13 +176,25 @@ bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
         client->setCgiStartTime(time(NULL));
 
         struct pollfd outPoll = {outputPipe[0], POLLIN, 0};
-        struct pollfd inPoll = {inputPipe[1], POLLOUT, 0};
-
         fds.push_back(outPoll);
-        fds.push_back(inPoll);
-
-        return true;
+		
+		//only write to CGI input for POST
+		if (req.getMethod() == "POST") {
+			client->setCgiInputBuffer(req.getBody());
+			client->setCgiFds(inputPipe[1], outputPipe[0]);
+			struct pollfd inPoll = {inputPipe[1], POLLOUT, 0};
+        	fds.push_back(inPoll);
+		}
+		else {
+			//we won't write anything an d close hte inputPipe[1]
+			//struct pollfd inPoll = {inputPipe[1], POLLOUT, 0};
+        	//fds.push_back(inPoll);
+			shutdown(inputPipe[1], SHUT_WR); //instead of close() as this causes the FD to close before child is done
+			close(inputPipe[1]);
+			client->setCgiFds(-1, outputPipe[0]);
+		}
     }
+	return true;
 }
 
 

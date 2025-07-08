@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/07/08 00:10:28 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 15:53:42 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,8 +78,8 @@ std::string	buildHtmlResponse(int code, const std::string& body);
 bool		validatePort(const std::string& portString);
 void		convertListenEntriesToPortsAndHost(ServerConfig& server);
 void 		checkDuplicateHostPortPairs(const std::vector<ServerConfig>& servers);
-void		runEventLoop(std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket, std::map<int, ClientConnection*>& clients,
-				std::map<int, ServerSocket*>& clientToServer);
+void 		runEventLoop(std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket,
+                std::map<int, ClientConnection*>& clients, std::map<int, ServerSocket*>& clientToServer);
 bool 		initialiseSockets(const std::vector<ServerConfig>& servers, std::vector<ServerSocket*>& serverSockets,
 				std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& fdToSocket);
 void		handleExistingClient(int fd, std::vector<pollfd> &fds, std::map<int, ClientConnection*>& clients, size_t& i,
@@ -164,5 +164,8 @@ bool		setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 				const Request& req);
 void 		processClientRequest(int fd, std::vector<struct pollfd>& fds, std::map<int, ClientConnection*>& clients,
 				std::map<int, ServerSocket*>& clientToServer);
+void		checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds);
+std::string getFileExtension(const std::string& filename);
+bool 		hasCGIExtension(const std::string& path, const ServerConfig& config);
 				
 #endif // WEBSERV_HPP

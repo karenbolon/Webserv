@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 02:24:43 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 15:57:42 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -118,7 +118,6 @@ void debugImageServing(const std::string& path, const std::string& fullPath) {
 	if (file.is_open()) {
 		size_t size = file.tellg();
 		std::cout << "   📏 File size: " << size << " bytes" << std::endl;
-		std::cerr << "in helper function close\n";
 		file.close();
 	}
 
@@ -194,7 +193,6 @@ void serveStaticFile(std::string path, const ServerConfig &config,
 
 	std::string body((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	file.close();
-	std::cerr << "in helper function close2\n";
 	std::string response = Response::build(200, body, contentType);
 	client->setPendingResponse(response);
 	for (size_t j = 0; j < fds.size(); ++j) {
@@ -271,7 +269,6 @@ std::string	getErrorPageBody(int code, const ServerConfig& config) {
 			std::string content((std::istreambuf_iterator<char>(file)),
 								std::istreambuf_iterator<char>());
 			file.close();
-			std::cerr << "in helper function close 3\n";
 			return content;
 		}
 	}
@@ -324,7 +321,7 @@ void handleClientCleanup(int fd, std::vector<pollfd>& fds,
 	// Safely close CGI FDs
     if (client->getCgiInputFd() != -1) 
 		close(client->getCgiInputFd());
-    if (client->getCgiOutputFd() != -1) 
+    if (client->getCgiOutputFd() != -1)
 		close(client->getCgiOutputFd());
 	if (!client) {
 		std::cerr << "❌ handleClientCleanup: ClientConnection is null for fd " << fd << std::endl;
@@ -335,7 +332,6 @@ void handleClientCleanup(int fd, std::vector<pollfd>& fds,
 	delete client;
 	clients.erase(fd);
 	close(fd);
-	std::cerr << "in helper function close 4\n";
 	// Remove from poll fds
 	fds.erase(fds.begin() + i);
 	--i;
@@ -351,7 +347,6 @@ void removePollFd(std::vector<pollfd>& fds, int fd) {
 	for (size_t i = 0; i <fds.size(); ++i) {
 		if (fds[i].fd == fd) {
 			close(fd);
-			std::cerr << "in helper function close 5\n";
 			fds.erase(fds.begin() + i);
 			break;
 		}
@@ -434,7 +429,6 @@ bool useChunkedTransfer(const std::string& fullPath) {
 
 	size_t fileSize = file.tellg();
 	file.close();
-	std::cerr << "in helper function close 6\n";
 
 	bool useChunked = fileSize > 1024 * 1024;
 
@@ -462,7 +456,6 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 	if (!sendAll(fd, headerStr.c_str(), headerStr.size())) {
 		std::cerr << "❌ Failed to send chunked headers" << std::endl;
 		file.close();
-		std::cerr << "in helper function close 7\n";
 		return false;
 	}
 
@@ -475,7 +468,6 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 		if (file.bad()) {
 			std::cerr << "❌ File read error during chunked transfer" << std::endl;
 			file.close();
-			std::cerr << "in helper function close 8\n";
 			return false;
 		}
 		size_t bytesRead = file.gcount();
@@ -489,21 +481,18 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 		// Send chunk size
 		if (!sendAll(fd, chunkHeaderStr.c_str(), chunkHeaderStr.size())) {
 			file.close();
-			std::cerr << "in helper function close 9\n";
 			return false;
 		}
 
 		// Send chunk data
 		if (!sendAll(fd, buffer, bytesRead)) {
 			file.close();
-			std::cerr << "in helper function close 10\n";
 			return false;
 		}
 
 		// Send chunk trailing CRLF
 		if (!sendAll(fd, "\r\n", 2)) {
 			file.close();
-			std::cerr << "in helper function close 11\n";
 			return false;
 		}
 
@@ -511,7 +500,6 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 	}
 	
 	file.close();
-	std::cerr << "in helper function close 12\n";
 
 	// Send final chunk (size 0) to indicate end
 	if (!sendAll(fd, "0\r\n\r\n", 5)) {
