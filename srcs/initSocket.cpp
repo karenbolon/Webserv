@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 15:52:24 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:49:02 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,10 +92,6 @@ void runEventLoop(std::vector<struct pollfd>& fds,
                   std::map<int, ServerSocket*>& clientToServer) 
 {
 	while (g_signal != 0) {
-		std::cerr << "Polling on fds: ";
-		for (size_t k = 0; k < fds.size(); ++k)
-			std::cerr << fds[k].fd << "(" << fds[k].events << ") ";
-		std::cerr << "\n";
 
 		int ready = poll(&fds[0], fds.size(), -1);
 		if (ready < 0) {
@@ -108,57 +104,54 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 			int fd = fds[i].fd;
 			short revents = fds[i].revents;
 
-			if (revents == 0) {
-				++i;
-				continue;
-			}
+			if (revents == 0) { ++i; continue; }
 
 			if (fdToSocket.count(fd)) {
 				handleNewClient(fdToSocket[fd], fds, clients, clientToServer);
-				++i;
-				continue;
+				++i; continue;
 			}
 
 			ClientConnection* client = findClientByFd(clients, fd);
 			if (!client) {
 				handleCgiPipeFd(fd, revents, fds, clients);
-				++i;
-				continue;
+				++i; continue;
 			}
 
 			checkCgiTimeout(client, fds);
 
+			//CGI STDOUT
 			if ((revents & POLLIN) && fd == client->getCgiOutputFd()) {
-				std::cerr << "🛠 Reading CGI output on fd " << fd << "\n";
 				char buf[4096];
 				ssize_t n = read(fd, buf, sizeof(buf));
 				if (n > 0) {
 					std::cerr << "🧾 Read " << n << " bytes from CGI\n";
 					client->appendToCgiOutput(buf, n);
-				} else if (n == 0) {
+				} else {
 					std::cerr << "📭 CGI stdout EOF, closing fd  " << fd << "\n";
 					removePollFd(fds, fd);
 					close(fd);
 					client->setCgiFds(client->getCgiInputFd(), -1);
 					if (client->getCgiInputFd() == -1)
 						client->markCgiDone();
-					--i;
-				} else if (n == -1) {
-					if (errno == EAGAIN || errno == EWOULDBLOCK) {
-						++i;
-						continue;
+
+					//IMMEDIATE RESPONSE PREPARATION
+					if (client->isCgiDone()) {
+						std::string response = formatCGIResponse(client->getCgiOutputBuffer());
+						client->setPendingResponse(response);
+						std::cerr << "📤 CGI response ready on client fd " << client->getFd() << "\n";
+
+						for (size_t j = 0; j < fds.size(); ++j) {
+							if (fds[j].fd == client->getFd()) {
+								fds[j].events |= POLLOUT;
+								break;
+							}
+						}
 					}
-					std::cerr << "⚠️ CGI stdout read error (fd " << fd << "): " << strerror(errno) << "\n";
-					removePollFd(fds, fd);
-					close(fd);
-					client->setCgiFds(client->getCgiInputFd(), -1);
-					if (client->getCgiInputFd() == -1)
-						client->markCgiDone();
-					--i;
 				}
-				continue;
+				--i; continue;
 			}
 
+			//CGI STDIN
 			if ((revents & POLLOUT) && fd == client->getCgiInputFd()) {
 				std::string& body = client->getCgiInputBuffer();
 				if (body.empty()) {
@@ -167,8 +160,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					client->setCgiFds(-1, client->getCgiOutputFd());
 					if (client->getCgiOutputFd() == -1)
 						client->markCgiDone();
-					++i;
-					continue;
+					++i; continue;
 				}
 				ssize_t sent = write(fd, body.c_str(), body.size());
 				if (sent <= 0) {
@@ -178,58 +170,38 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					client->setCgiFds(-1, client->getCgiOutputFd());
 					if (client->getCgiOutputFd() == -1)
 						client->markCgiDone();
-					--i;
-					continue;
+					--i; continue;
 				}
 				client->consumeCgiInput(sent);
 				if (client->cgiInputBufferEmpty()) {
-					std::cerr << "✅ CGI stdin complete\n";
 					shutdown(fd, SHUT_WR);
 					removePollFd(fds, fd);
 					client->setCgiFds(-1, client->getCgiOutputFd());
 					if (client->getCgiOutputFd() == -1)
 						client->markCgiDone();
 				}
-				++i;
-				continue;
+				++i; continue;
 			}
 
-			if (client->isCgiDone() && client->getCgiOutputFd() == -1) {
-				if (client->getPendingSendBuffer().empty()) {
-					std::cerr << "📤 CGI response ready on client fd " << client->getFd() << "\n";
-					std::string response = formatCGIResponse(client->getCgiOutputBuffer());
-					client->setPendingResponse(response);
-					for (size_t j = 0; j < fds.size(); ++j) {
-						if (fds[j].fd == client->getFd())
-							fds[j].events |= POLLOUT;
-					}
-				}
-			}
-
-			// if (revents & (POLLERR | POLLHUP | POLLNVAL)) {
-			// 	std::cerr << "❌ Client error on fd " << fd << "\n";
-			// 	handleClientCleanup(fd, fds, clients, i);
-			// 	continue;
-			// }
-
+			//Standard client POLLIN
 			if ((revents & POLLIN) && fd == client->getFd()) {
 				int recvResult = client->recvFullRequest(fd, clientToServer[fd]->getConfig(), client, fds);
 				if (recvResult <= 0) {
 					handleClientCleanup(fd, fds, clients, i);
 					continue;
 				}
-				if (client->isRequestComplete()) {
+				if (client->isRequestComplete())
 					processClientRequest(fd, fds, clients, clientToServer);
-				}
-				++i;
-				continue;
+				++i; continue;
 			}
 
+			//Standard client POLLOUT
 			if ((revents & POLLOUT) && fd == client->getFd() && client->wantsToWrite()) {
 				std::string& buf = client->getPendingSendBuffer();
 				size_t& sent = client->getBytesSentSoFar();
 				ssize_t n = send(fd, buf.c_str() + sent, buf.size() - sent, 0);
 				if (n <= 0) {
+					//client->setChunkedInProgress(false);
 					handleClientCleanup(fd, fds, clients, i);
 					continue;
 				}
@@ -239,8 +211,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					handleClientCleanup(fd, fds, clients, i);
 					continue;
 				}
-				++i;
-				continue;
+				++i; continue;
 			}
 
 			++i;
@@ -252,11 +223,15 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 
 
 
+
+
+
+
 void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
 	if (!client->isCgiRunning())
 		return;
 	time_t now = time(NULL);
-	if (now - client->getCgiStartTime() > 5) {
+	if (now - client->getCgiStartTime() > 10) {
 		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << ", killing 🔪🩸😵\n\n";
 		kill(client->getCgiPid(), SIGKILL);
 		
@@ -292,8 +267,7 @@ void processClientRequest(int fd,
                 std::vector<struct pollfd>& fds,
                 std::map<int, ClientConnection*>& clients,
                 std::map<int, ServerSocket*>& clientToServer) {
-        
-    std::cout << "Process cleint request\n";				
+        			
     ClientConnection* client = clients[fd];
     std::string raw = client->getRawRequest();
 
@@ -338,7 +312,6 @@ void processClientRequest(int fd,
         response << "Location: " << location.redirect << "\r\n";
         response << "Connection: close\r\n";
         response << "\r\n";
-
         client->setPendingResponse(response.str());
         for (size_t j = 0; j < fds.size(); ++j) {
             if (fds[j].fd == fd) {
@@ -414,7 +387,6 @@ void handleExistingClient(int fd, std::vector<pollfd> &fds,
 		if (!client->isRequestComplete()) {
 			return; // Wait for more data
 		}
-		std::cout << "checking is request is complete 2\n";
 		processClientRequest(fd, fds, clients, clientToServer);
 	}
 	catch (const std::exception& e) {

@@ -148,4 +148,4 @@ puts '</div>'
 puts '</body>'
 puts '</html>'
 
-$stdout.flush
+STDOUT.flush

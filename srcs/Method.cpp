@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/08 15:43:41 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:15:16 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,11 @@ bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 	
 	// First: Check if this is a CGI request FIRST (highest priority)
 	if (path.find("/cgi-bin/") == 0) {
-		std::string fullPath = location.root + path;
+		std::string fullPath;
+		if (path.find("/cgi-bin/") == 0)
+    		fullPath = "www" + path; // or config.root + path if config.root == "www"
+		else
+    		fullPath = location.root + path;
 
 		if (!fileExists(fullPath)) {
 			std::cout << "❌ CGI file not found: " << fullPath << std::endl;

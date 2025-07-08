@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:30 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 15:36:19 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:42:58 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,6 +41,7 @@ class ClientConnection {
     time_t            _cgiStartTime;
     bool              _cgiDone;
     bool              _cgiRunning;
+    bool              _chunkedInProgress;
 
   public:
     ClientConnection(int fd);
@@ -78,6 +79,8 @@ class ClientConnection {
     bool              cgiInputBufferEmpty() const;
     time_t            getCgiStartTime() const;
     void              setCgiStartTime(time_t t);
+    void              setChunkedInProgress(bool val);
+    bool              isChunkedInProgress() const;
      
     std::string	      getRawRequest() const;
     

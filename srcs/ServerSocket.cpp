@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:37 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 01:32:43 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:26:31 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,7 +103,6 @@ int		ServerSocket::acceptClient() {
 	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1) {
 		std::cerr << "Failed to set FD to non-blocking: " << std::strerror(errno) << std::endl;
 		close(client_fd);
-		std::cerr << "in server function close 3\n";
 		return -1;
 	}
 	std::cout << "Accepted connection on socket: " << client_fd << std::endl;
@@ -113,7 +112,6 @@ int		ServerSocket::acceptClient() {
 void	ServerSocket::closeSocket() {
 	if (_fd != -1) {
 		close(_fd);
-		std::cerr << "in server function close 4\n";
 		_fd = -1;
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 15:36:16 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 17:43:38 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,8 @@
 ClientConnection::ClientConnection(int fd) 
 	: _fd(fd), _pendingSendBuffer(), _bytesSentSoFar(0), _wantsToWrite(false), 
 	_cgiInputFd(-1), _cgiOutputFd(-1), _cgiPid(-1), _cgiOutputBuffer(), 
-	_cgiInputBuffer(), _cgiStartTime(0), _cgiDone(false), _cgiRunning(false) {
+	_cgiInputBuffer(), _cgiStartTime(0), _cgiDone(false), _cgiRunning(false), 
+	_chunkedInProgress(false) {
 	int flags = fcntl(_fd, F_GETFL, 0);
 	if (!(flags & O_NONBLOCK))
 		fcntl(_fd, F_SETFL, flags | O_NONBLOCK);
@@ -200,4 +201,12 @@ time_t ClientConnection::getCgiStartTime() const {
 
 void ClientConnection::setCgiStartTime(time_t t) {
 	_cgiStartTime = t;
+}
+
+void   ClientConnection::setChunkedInProgress(bool val) {
+	_chunkedInProgress = val;
+}
+
+bool   ClientConnection::isChunkedInProgress() const {
+	return _chunkedInProgress;
 }
