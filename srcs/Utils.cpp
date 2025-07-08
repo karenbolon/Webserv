@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Utils.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 03:08:22 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/04 15:54:09 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 01:33:36 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -166,6 +166,7 @@ bool writeFileToServer(const std::string& request, size_t contentStart, size_t c
 		if (outFile.fail()) {
 			std::cerr << "❌ Error writing chunk at offset " << bytesWritten << std::endl;
 			outFile.close();
+			std::cerr << "in utils function close\n";
 			return false;
 		}
 
@@ -188,6 +189,7 @@ bool writeFileToServer(const std::string& request, size_t contentStart, size_t c
 	}
 
 	outFile.close();
+	std::cerr << "in utils function close 2\n";
 
 	// Check for write errors
 	if (outFile.fail()) {
@@ -213,6 +215,7 @@ std::string loadAndProcessSuccessTemplate(const ServerConfig& config, const std:
 		templateContent.assign((std::istreambuf_iterator<char>(successFile)),
 							std::istreambuf_iterator<char>());
 		successFile.close();
+		std::cerr << "in utils function close 3\n";
 
 		// Process template with "uploaded" action
 		replaceTemplateVariables(templateContent, filename, "uploaded");
@@ -250,7 +253,7 @@ std::string loadAndProcessDeleteTemplate(const ServerConfig& config, const std::
 		templateContent.assign((std::istreambuf_iterator<char>(successFile)),
 							std::istreambuf_iterator<char>());
 		successFile.close();
-
+		std::cerr << "in utils function close 4\n";
 		// Process template with "deleted" action
 		replaceTemplateVariables(templateContent, filename, "deleted");
 

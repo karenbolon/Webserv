@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ServerSocket.hpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:08 by kbolon            #+#    #+#             */
-/*   Updated: 2025/06/25 11:35:19 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/07 13:26:06 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,7 @@ class ServerSocket {
 
     int		acceptClient();
     void	closeSocket();
-    int		getFD();
+    int		getFd();
 };
 
 #endif // SERVERSOCKET_HPP
