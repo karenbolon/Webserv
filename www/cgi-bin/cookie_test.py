@@ -13,10 +13,10 @@ import time
 cookie = os.environ.get("HTTP_COOKIE", "")
 query = os.environ.get("QUERY_STRING", "")
 headers = []
-
+#
 # Debug print to stderr
-print("DEBUG - Cookie received:", repr(cookie), file=sys.stderr)
-print("DEBUG - Query string:", repr(query), file=sys.stderr)
+#print("DEBUG - Cookie received:", repr(cookie), file=sys.stderr)
+#print("DEBUG - Query string:", repr(query), file=sys.stderr)
 
 # Check if this is a reset request
 if "reset=1" in query:
@@ -27,7 +27,7 @@ if "reset=1" in query:
 	is_returning = False
 	visit_count = 0
 	message = "🧹 Cookies cleared! You're a fresh visitor again!"
-	print("DEBUG - Resetting cookies", file=sys.stderr)
+	#print("DEBUG - Resetting cookies", file=sys.stderr)
 else:
 	# Parse existing cookies
 	is_returning = "visited=yes" in cookie
@@ -42,13 +42,13 @@ else:
 				if part.startswith('visit_count='):
 					current_count = int(part.split('=')[1])
 					visit_count = current_count + 1
-					print(f"DEBUG - Found existing count: {current_count}, incrementing to: {visit_count}", file=sys.stderr)
+					#print(f"DEBUG - Found existing count: {current_count}, incrementing to: {visit_count}", file=sys.stderr)
 					break
 		except (ValueError, IndexError) as e:
-			print(f"DEBUG - Error parsing visit count: {e}", file=sys.stderr)
+			#print(f"DEBUG - Error parsing visit count: {e}", file=sys.stderr)
 			visit_count = 1
 
-	print(f"DEBUG - Is returning: {is_returning}, Visit count: {visit_count}", file=sys.stderr)
+	#print(f"DEBUG - Is returning: {is_returning}, Visit count: {visit_count}", file=sys.stderr)
 
 	# Set cookies based on status
 	if not is_returning:
@@ -58,14 +58,14 @@ else:
 		headers.append(f"Set-Cookie: last_visit={datetime.now().isoformat()}; Path=/; Max-Age=86400")
 		message = "🎉 Welcome! Your first magical cookie has been created!"
 		visit_count = 1
-		print("DEBUG - Setting first time cookies", file=sys.stderr)
+		#print("DEBUG - Setting first time cookies", file=sys.stderr)
 	else:
 		# Returning visitor - increment count
 		headers.append("Set-Cookie: visited=yes; Path=/; Max-Age=86400")  # Refresh the cookie
 		headers.append(f"Set-Cookie: visit_count={visit_count}; Path=/; Max-Age=86400")
 		headers.append(f"Set-Cookie: last_visit={datetime.now().isoformat()}; Path=/; Max-Age=86400")
 		message = f"🎉 Welcome back! This is your visit #{visit_count}!"
-		print(f"DEBUG - Setting returning visitor cookies, count: {visit_count}", file=sys.stderr)
+		#print(f"DEBUG - Setting returning visitor cookies, count: {visit_count}", file=sys.stderr)
 
 # Add content type header
 headers.append("Content-Type: text/html; charset=utf-8")

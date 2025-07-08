@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/07/08 15:53:42 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 20:20:43 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,7 @@ void		handlePut(const Request& req, const std::string& path, const LocationConfi
 				ClientConnection* client, std::vector<struct pollfd>& fds);
 void 		handleDelete(const std::string& path, const LocationConfig& location, const ServerConfig& config,
 				ClientConnection* client, std::vector<struct pollfd>& fds);
-bool		handleHead(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config, ClientConnection* client, std::vector<struct pollfd>& fds);
+bool		handleHead(int fd, const std::string& path, const LocationConfig& location, ClientConnection* client, std::vector<struct pollfd>& fds);
 bool		handleRedirect(int fd, const LocationConfig& location, const ServerConfig& config);
 
 // Helper Functions
@@ -135,7 +135,7 @@ std::string	formatCGIResponse(const std::string& scriptOutput);
 
 // Chunked transfer functions (no class needed!)
 bool		useChunkedTransfer(const std::string& fullPath);
-bool		sendFileChunked(int fd, const std::string& fullPath, const std::string& contentType);
+bool		sendFileChunked(int fd, const std::string& fullPath, const std::string& contentType, ClientConnection* client);
 
 // Enhanced PUT handling functions
 void		handleFileRename(const std::string& path, const std::string& newName,
@@ -167,5 +167,6 @@ void 		processClientRequest(int fd, std::vector<struct pollfd>& fds, std::map<in
 void		checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds);
 std::string getFileExtension(const std::string& filename);
 bool 		hasCGIExtension(const std::string& path, const ServerConfig& config);
+bool 		sendNextChunk(ClientConnection* client);
 				
 #endif // WEBSERV_HPP

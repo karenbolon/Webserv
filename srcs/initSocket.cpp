@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 17:49:02 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 20:48:37 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,7 +92,6 @@ void runEventLoop(std::vector<struct pollfd>& fds,
                   std::map<int, ServerSocket*>& clientToServer) 
 {
 	while (g_signal != 0) {
-
 		int ready = poll(&fds[0], fds.size(), -1);
 		if (ready < 0) {
 			if (errno == EINTR) continue;
@@ -119,39 +118,34 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 
 			checkCgiTimeout(client, fds);
 
-			//CGI STDOUT
+			// === CGI STDOUT ===
 			if ((revents & POLLIN) && fd == client->getCgiOutputFd()) {
 				char buf[4096];
 				ssize_t n = read(fd, buf, sizeof(buf));
 				if (n > 0) {
-					std::cerr << "🧾 Read " << n << " bytes from CGI\n";
 					client->appendToCgiOutput(buf, n);
 				} else {
-					std::cerr << "📭 CGI stdout EOF, closing fd  " << fd << "\n";
+					//std::cerr << "📭 CGI stdout EOF, closing fd " << fd << "\n";
 					removePollFd(fds, fd);
 					close(fd);
 					client->setCgiFds(client->getCgiInputFd(), -1);
 					if (client->getCgiInputFd() == -1)
 						client->markCgiDone();
 
-					//IMMEDIATE RESPONSE PREPARATION
 					if (client->isCgiDone()) {
 						std::string response = formatCGIResponse(client->getCgiOutputBuffer());
 						client->setPendingResponse(response);
-						std::cerr << "📤 CGI response ready on client fd " << client->getFd() << "\n";
+						//std::cerr << "📤 CGI response ready on client fd " << client->getFd() << "\n";
 
-						for (size_t j = 0; j < fds.size(); ++j) {
-							if (fds[j].fd == client->getFd()) {
+						for (size_t j = 0; j < fds.size(); ++j)
+							if (fds[j].fd == client->getFd())
 								fds[j].events |= POLLOUT;
-								break;
-							}
-						}
 					}
 				}
 				--i; continue;
 			}
 
-			//CGI STDIN
+			// === CGI STDIN ===
 			if ((revents & POLLOUT) && fd == client->getCgiInputFd()) {
 				std::string& body = client->getCgiInputBuffer();
 				if (body.empty()) {
@@ -183,7 +177,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				++i; continue;
 			}
 
-			//Standard client POLLIN
+			// === Client POLLIN ===
 			if ((revents & POLLIN) && fd == client->getFd()) {
 				int recvResult = client->recvFullRequest(fd, clientToServer[fd]->getConfig(), client, fds);
 				if (recvResult <= 0) {
@@ -195,35 +189,57 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				++i; continue;
 			}
 
-			//Standard client POLLOUT
+			// === Client POLLOUT (static or chunked) ===
 			if ((revents & POLLOUT) && fd == client->getFd() && client->wantsToWrite()) {
 				std::string& buf = client->getPendingSendBuffer();
 				size_t& sent = client->getBytesSentSoFar();
 				ssize_t n = send(fd, buf.c_str() + sent, buf.size() - sent, 0);
+										
 				if (n <= 0) {
-					//client->setChunkedInProgress(false);
-					handleClientCleanup(fd, fds, clients, i);
-					continue;
-				}
-				sent += n;
-				if (sent == buf.size()) {
+					//std::cerr << "❌ Send failed on client fd " << fd << "\n";
+					client->setChunkState(ERROR);
 					client->clearSendState();
 					handleClientCleanup(fd, fds, clients, i);
 					continue;
 				}
-				++i; continue;
+
+				sent += n;
+				if (sent == buf.size()) {
+					client->clearSendState();
+
+					if (client->isChunkedDone()) {
+						std::cerr << "✅ Final chunk sent to client fd " << fd << "\n";
+						handleClientCleanup(fd, fds, clients, i);
+						continue;
+					}
+					if (client->getChunkState() == IN_PROGRESS && !client->getChunkFilePath().empty()) {
+						if (!sendNextChunk(client)) {
+							std::cerr << "❌ Failed to send next chunk\n";
+							client->setChunkState(ERROR);
+							client->clearSendState();
+							handleClientCleanup(fd, fds, clients, i);
+							continue;
+						}
+					}
+					if (client->isChunkedError()) {
+						std::string response = getErrorPageBody(500, clientToServer[fd]->getConfig());
+						client->setPendingResponse(response);
+						client->resetChunkedFlags();
+						for (size_t j = 0; j < fds.size(); ++j)
+							if (fds[j].fd == client->getFd())
+								fds[j].events |= POLLOUT;
+						++i;
+						continue;
+					}
+				}
+				++i;
+				continue;
 			}
 
-			++i;
+			++i; // safeguard
 		}
 	}
 }
-
-
-
-
-
-
 
 
 
@@ -328,6 +344,8 @@ void processClientRequest(int fd,
         handlePost(client, fds, req, path, location, config);
     } else if (method == "DELETE") {
         handleDelete(path, location, config, client, fds);
+	//} else if (method == "HEAD") {
+		//handleHead(fd, path, location, client, fds);
     } else {
         std::string body = getErrorPageBody(501, config);
         std::string response = Response::build(501, body, "text/html");

@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:30 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 17:42:58 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 19:09:56 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,11 +14,14 @@
 #define CLIENTCONNECTION_HPP
 
 #include <string>
+#include <vector>
+#include <fstream>
 
-enum ClientState {
-  READING_HEADERS,
-  READING_BODY,
-  REQUEST_COMPLETE
+enum ChunkState {
+  IDLE,
+  IN_PROGRESS,
+  DONE,
+  ERROR
 };
 
 class ClientConnection {
@@ -30,7 +33,6 @@ class ClientConnection {
     std::string       _pendingSendBuffer;
     size_t            _bytesSentSoFar;
     bool              _wantsToWrite;
-   
     
     //CGI
     int               _cgiInputFd;
@@ -41,7 +43,11 @@ class ClientConnection {
     time_t            _cgiStartTime;
     bool              _cgiDone;
     bool              _cgiRunning;
-    bool              _chunkedInProgress;
+    
+    //chunk transfer
+    ChunkState        _chunkedState;
+    std::ifstream     _chunkFileStream;
+    std::string       _chunkFilePath;
 
   public:
     ClientConnection(int fd);
@@ -50,19 +56,19 @@ class ClientConnection {
     int                 getFd() const;
     std::vector<char>&  getBuffer();
 
+    //request/response
+    bool              isRequestComplete() const;
+    int               recvFullRequest(int client_fd, const ServerConfig& config, ClientConnection* client, std::vector<struct pollfd>& fds);
+
     //non-blocking send
-    void              setCgiInputBuffer(const std::string& data);
     void              setPendingResponse(const std::string& response);
     bool              wantsToWrite() const;
     std::string&      getPendingSendBuffer();
     size_t&           getBytesSentSoFar();
     void              clearSendState();
-
-    //request/response
-    bool              isRequestComplete() const;
-    int               recvFullRequest(int client_fd, const ServerConfig& config, ClientConnection* client, std::vector<struct pollfd>& fds);
-
+    
     //CGI
+    void              setCgiInputBuffer(const std::string& data);
     int               getCgiOutputFd() const;
     int               getCgiInputFd() const;
     void              setCgiFds(int input, int outputFd);
@@ -79,8 +85,18 @@ class ClientConnection {
     bool              cgiInputBufferEmpty() const;
     time_t            getCgiStartTime() const;
     void              setCgiStartTime(time_t t);
-    void              setChunkedInProgress(bool val);
-    bool              isChunkedInProgress() const;
+
+    //chunked
+    void              setChunkFilePath(const std::string& path);
+    std::string       getChunkFilePath() const;
+    std::ifstream&    getChunkFileStream();
+    bool              openChunkFile();
+    void              closeChunkFile();
+    void              setChunkState(ChunkState state);
+    ChunkState        getChunkState() const;
+    bool              isChunkedDone() const;
+    bool              isChunkedError() const;
+    void              resetChunkedFlags();
      
     std::string	      getRawRequest() const;
     

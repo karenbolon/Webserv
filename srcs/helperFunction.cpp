@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 15:57:42 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 20:48:01 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,7 +124,6 @@ void debugImageServing(const std::string& path, const std::string& fullPath) {
 	// Get content type
 	Response resp;
 	std::string contentType = resp.getContentType(fullPath);
-//	std::cout << "   📝 Content-Type: " << contentType << std::endl;
 
 	// Check if it's a valid image type
 	if (contentType.find("image/") == 0) {
@@ -136,9 +135,8 @@ void debugImageServing(const std::string& path, const std::string& fullPath) {
 
 void serveStaticFile(std::string path, const ServerConfig &config,
 	ClientConnection* client, std::vector<struct pollfd>& fds) {
+		
 	// Check if the path is empty or just a slash, then use the index file
-//	std::cout << "🗂️ Serving static file: fullPath = '" << path << "'" << std::endl;
-
 	if (path.empty() || path == "/")
 		path = "/" + config.index;
 	std::string fullPath = config.root + path;
@@ -150,10 +148,13 @@ void serveStaticFile(std::string path, const ServerConfig &config,
 		sendHtmlResponse(403, errorBody, client, fds);
 		return;
 	}
+	
+	if (fullPath.empty()) {
+		return;
+	}
 
 	// Check if file exists
 	if (!fileExists(fullPath)) {
-		std::cout << "DEBUG: fullPath in HELPER= '" << fullPath << "'" << std::endl;
 		std::cerr << "❌ Static file not found: " << fullPath << std::endl;
 		std::string errorBody = getErrorPageBody(404, config);
 		sendHtmlResponse(404, errorBody, client, fds);
@@ -163,44 +164,41 @@ void serveStaticFile(std::string path, const ServerConfig &config,
 	// Get content type
 	Response resp;
 	std::string contentType = resp.getContentType(fullPath);
-//	std::cout << "📝 Content-Type: " << contentType << std::endl;
 
 	// Check if we should use chunked transfer
 	if (useChunkedTransfer(fullPath)) {
-//		std::cout << "🚀 Using CHUNKED TRANSFER for large file" << std::endl;
-
-		if (sendFileChunked(client->getFd(), fullPath, contentType)) {
+		if (sendFileChunked(client->getFd(), fullPath, contentType, client)) {
 			std::cout << "✅ Chunked transfer completed successfully" << std::endl;
 		}
 		else {
-			std::cout << "❌ Chunked transfer failed, sending error" << std::endl;
-			std::string errorBody = getErrorPageBody(500, config);
-			sendHtmlResponse(500, errorBody, client, fds);
+			client->setChunkState(ERROR);
+			//std::cout << "❌ Chunked transfer failed, sending error" << std::endl;
+			//std::string errorBody = getErrorPageBody(500, config);
+			//sendHtmlResponse(500, errorBody, client, fds);
 		}
 		return;
 	}
-
-	// Use regular transfer for smaller files
-	//std::cout << "📄 Using REGULAR TRANSFER for normal-sized file" << std::endl;
-
+	//Use regular transfer for smaller files
+	//std::ios::binary opens the file in binary mode (don't need to decode or worry
+	//about newlines)
 	std::ifstream file(fullPath.c_str(), std::ios::binary);
 	if (!file.is_open()) {
-		std::cerr << "❌ Cannot open file: " << fullPath << std::endl;
-		std::string errorBody = getErrorPageBody(500, config);
-		sendHtmlResponse(500, errorBody, client, fds);
+		std::cout << "❌ Cannot open file for size check: " << fullPath << std::endl;
+		std::string errorBody = getErrorPageBody(404, config);
+        sendHtmlResponse(404, errorBody, client, fds);
 		return;
 	}
-
+	
 	std::string body((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	file.close();
 	std::string response = Response::build(200, body, contentType);
-	client->setPendingResponse(response);
-	for (size_t j = 0; j < fds.size(); ++j) {
-		if (fds[j].fd == client->getFd())
-			fds[j].events |= POLLOUT;
-	}
-	return;
-
+    client->setPendingResponse(response);
+	
+	// Set POLLOUT to send headers first
+    for (size_t j = 0; j < fds.size(); ++j) {
+        if (fds[j].fd == client->getFd())
+            fds[j].events |= POLLOUT;
+    }
 }
 
 std::string extractBoundary(const std::string& request) {
@@ -421,22 +419,27 @@ std::string generateJsonDirectoryListing(const std::string& dirPath) {
 
 // Check if file should use chunked transfer
 bool useChunkedTransfer(const std::string& fullPath) {
+	//std::ios::binary opens the file in binary mode (don't need to decode or worry
+	//about newlines), std::ios::ate is for non-test files (images and videos)
+	//ate mean "at end" and tellg() returns the current position of the file pointer (as a # of
+	//bytes from the start)
 	std::ifstream file(fullPath.c_str(), std::ios::binary | std::ios::ate);
 	if (!file.is_open()) {
 		std::cout << "❌ Cannot open file for size check: " << fullPath << std::endl;
 		return false;
 	}
 
-	size_t fileSize = file.tellg();
+	std::streamoff fileSize = file.tellg();
 	file.close();
 
-	bool useChunked = fileSize > 1024 * 1024;
+	if (fileSize > 5 * 1024 * 1024) //5 MB
+		return true;
 
-	return useChunked;
+	return false;
 }
 
 // Send file using chunked transfer encoding
-bool sendFileChunked(int fd, const std::string& fullPath, const std::string& contentType) {
+bool sendFileChunked(int fd, const std::string& fullPath, const std::string& contentType, ClientConnection* client) {
 
 	std::ifstream file(fullPath.c_str(), std::ios::binary);
 	if (!file.is_open()) {
@@ -503,10 +506,11 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 
 	// Send final chunk (size 0) to indicate end
 	if (!sendAll(fd, "0\r\n\r\n", 5)) {
+		client->isChunkedError();
 		std::cerr << "❌ Failed to send final chunk" << std::endl;
 		return false;
 	}
-
+	client->isChunkedDone();
 	std::cout << "✅ Chunked transfer complete!" << std::endl;
 	std::cout << "   📊 Total chunks: " << chunkCount << std::endl;
 	std::cout << "   📏 Total bytes: " << totalBytesSent << std::endl;
@@ -577,14 +581,16 @@ bool sendAll(int fd, const char* buffer, size_t length) {
 
 	while (totalSent < length) {
 		ssize_t sent = send(fd, buffer + totalSent, length - totalSent, 0);
-		if (sent < 0) {
-			if (++retryCount > maxRetries)
+		if (sent == 0)
+			return false;
+		else if (sent < 0) {
+			if (++retryCount > maxRetries) {
+				//std::cerr << "❌ sendAll: failed to send after " << maxRetries << " retries (fd " << fd << ")\n";
 				return false;
+			}
 			usleep(1000);
 			continue;
 		}
-		if (sent == 0)
-			return false;
 		totalSent += sent;
 		retryCount = 0; // Reset on successful send
 	}
@@ -616,5 +622,47 @@ bool findFileContentInSection(const std::string& request, size_t sectionStart,
 	}
 
 	contentLength = contentEnd - contentStart;
+	return true;
+}
+
+
+bool sendNextChunk(ClientConnection* client) {
+	const size_t CHUNK_SIZE = 4096;
+	if (client->getChunkFilePath().empty()) {
+		std::cerr << "❌ Chunk file path is empty!\n";
+		client->setChunkState(ERROR);
+		return false;
+	}
+	std::ifstream& file = client->getChunkFileStream();
+
+	if (!file.is_open()) {
+		if (!client->openChunkFile()) {
+			std::cerr << "❌ Failed to open file: " << client->getChunkFilePath() << "\n";
+			client->setChunkState(ERROR);
+			return false;
+		}
+	}
+
+	char buffer[CHUNK_SIZE];
+	file.read(buffer, CHUNK_SIZE);
+	std::streamsize bytesRead = file.gcount();
+
+	if (bytesRead > 0) {
+		std::ostringstream chunk;
+		chunk << std::hex << bytesRead << "\r\n";
+		chunk.write(buffer, bytesRead);
+		chunk << "\r\n";
+
+		client->setPendingResponse(chunk.str());
+		client->getBytesSentSoFar() = 0;
+		client->setChunkState(IN_PROGRESS);
+		return true;
+	}
+
+	// Final chunk
+	client->closeChunkFile();
+	client->setPendingResponse("0\r\n\r\n");
+	client->getBytesSentSoFar() = 0;
+	client->setChunkState(DONE);
 	return true;
 }
