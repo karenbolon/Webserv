@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ServerSocket.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:37 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/07 13:26:30 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 01:32:43 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,12 +52,14 @@ bool	ServerSocket::init(int port, const std::string& host) {
 	if (setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
 		std::cerr << "setsockopt failed: " << strerror(errno) << std::endl;
 		close(_fd);
+		std::cerr << "in server function close\n";
 		return false;
 	}
 	//make the socket non-blocking
 	if (fcntl(_fd, F_SETFL, O_NONBLOCK) == -1) {
 		std::cerr << "Failed to set FD to non-blocking: " << std::strerror(errno) << std::endl;
 		close(_fd);
+		std::cerr << "in server function close 2\n";
 		return false;
 	}
 	//fills socket address struct
@@ -93,12 +95,15 @@ const ServerConfig& ServerSocket::getConfig() const {
 int		ServerSocket::acceptClient() {
 	int	client_fd = accept(_fd, NULL, NULL);
 	if (client_fd == -1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) 
+			return -1;
 		std::cerr << "Failed to accept: " << std::strerror(errno) << std::endl;
 		return -1;
 	}
 	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1) {
 		std::cerr << "Failed to set FD to non-blocking: " << std::strerror(errno) << std::endl;
 		close(client_fd);
+		std::cerr << "in server function close 3\n";
 		return -1;
 	}
 	std::cout << "Accepted connection on socket: " << client_fd << std::endl;
@@ -108,6 +113,7 @@ int		ServerSocket::acceptClient() {
 void	ServerSocket::closeSocket() {
 	if (_fd != -1) {
 		close(_fd);
+		std::cerr << "in server function close 4\n";
 		_fd = -1;
 	}
 }

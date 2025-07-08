@@ -18,7 +18,8 @@ NAME = webserv
 
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98  -fsanitize=address -g
+LDFLAGS = -fsanitize=address
 INCLUDES = -I include
 RM = rm -rf
 
@@ -108,7 +109,7 @@ Start :
 
 $(NAME): $(OBJS)
 	$(call print_status,"Creating WebServ...")
-	@$(CXX) $(INCLUDES) $(CXXFLAGS) -o $@ $^ > /dev/null
+	@$(CXX) $(INCLUDES) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ > /dev/null
 	@echo "${CHECK} Compiling utilities! ${RT}"
 
 create_obj_dir:
@@ -118,22 +119,6 @@ create_obj_dir:
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | create_obj_dir
 	@mkdir -p $(dir $@)
 	@$(CXX) $(INCLUDES) $(CXXFLAGS) -c $< -o $@ > /dev/null
-
-TEST_BINARIES = $(TEST_SRC:.cpp=)
-TEST_FULL_BIN = $(TEST_FULL:.cpp=)
-test: $(TEST_BINARIES)
-
-
-$(TEST_DIR)/%: $(TEST_DIR)/%.cpp $(SHARED)
-	@echo "Compiling $@..."
-	@$(CXX) $(INCLUDES) $(CXXFLAGS) -o $@ $^
-	@echo "${PINK}Test...${RT}";
-	@echo "${CHECK} successfully compiled! 📚$(RT)";
-
-test_full: $(TEST_FULL_BIN)
-	@chmod +x ./test/tester.sh
-	@echo "🧪 Running test suite..."
-	@./test/tester.sh
 
 End :
 	@echo "${PINK}WebServ...${RT}";

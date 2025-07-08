@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiFunctions.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/07 15:29:00 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 02:14:55 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,7 +50,7 @@ bool handleSimpleCGI(ClientConnection* client, std::vector<struct pollfd>& fds, 
 	if (interpreter.empty()) {
 		std::cerr << "❌ No interpreter found for " << path << std::endl;
 		std::string errorBody = getErrorPageBody(500, config);
-		sendHtmlResponse(client->getFd(), 500, errorBody);
+		sendHtmlResponse(500, errorBody, client, fds);
 		return false;
 	}
 
@@ -67,7 +67,7 @@ bool handleSimpleCGI(ClientConnection* client, std::vector<struct pollfd>& fds, 
 	if (!fileExists(scriptPath)) {
 		std::cerr << "❌ Script file not found: " << scriptPath << std::endl;
 		std::string errorBody = getErrorPageBody(404, config);
-		sendHtmlResponse(client->getFd(), 404, errorBody);
+		sendHtmlResponse(404, errorBody, client, fds);
 		return false;
 	}
 
@@ -79,13 +79,18 @@ bool handleSimpleCGI(ClientConnection* client, std::vector<struct pollfd>& fds, 
 	if (!setUpCgi(client, fds, interpreter, scriptPath, req)) {
 		std::cerr << "❌ Failed to set up CGI execution for: " << scriptPath << std:: endl;
 		std::string errorBody = getErrorPageBody(500, config);
-		safeSend(client->getFd(), errorBody);
+		client->setPendingResponse(errorBody);
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == client->getFd())
+				fds[j].events |= POLLOUT;
+		}
 		return false;
 	}
 
 	return true;
 }
 
+/*
 bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const std::string& interpreter, const std::string& scriptPath,
 				const Request& req) {
 
@@ -94,17 +99,17 @@ bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const s
 
 	if (pipe(outputPipe) == -1 || pipe(inputPipe) == -1) {
 		std::cerr << "❌ Failed to create pipes" << std::endl;
-		return "";
+		return false;
 	}
 
 	// Fork a new process
 	pid_t pid = fork();
 	if (pid < 0) {
 		std::cerr << "❌ Fork failed" << std::endl;
-		close(outputPipe[0]);
-		close(outputPipe[1]);
-		close(inputPipe[0]);
-		close(inputPipe[1]);
+		close(outputPipe[0]); close(outputPipe[1]);
+		std::cerr << "debug in kid\n";
+		close(inputPipe[0]); close(inputPipe[1]);
+		std::cerr << "debug in kid 2\n";
 		return false;
 	}
 
@@ -116,10 +121,8 @@ bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const s
 		dup2(outputPipe[1], STDOUT_FILENO);
 
 		// Close unused pipe ends
-		close(outputPipe[0]);
-		close(outputPipe[1]);
-		close(inputPipe[0]);
-		close(inputPipe[1]);
+		close(outputPipe[0]); close(outputPipe[1]);
+		close(inputPipe[0]); close(inputPipe[1]);
 
 		// Prepare environment variables
 		std::vector<std::string> envStrings;
@@ -141,7 +144,6 @@ bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const s
 			it != headers.end(); ++it) {
 
 			std::string httpVar = "HTTP_";  // Start with HTTP_ prefix only
-
 			// Transform the header name: hyphens to underscores, all uppercase
 			for (size_t i = 0; i < it->first.length(); ++i) {
 				char c = it->first[i];
@@ -154,6 +156,8 @@ bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const s
 
 			std::string envVar = httpVar + "=" + it->second;
 			envStrings.push_back(envVar);
+					std::vector<char*> envp;
+		}
 
 			//std::cout << "✅ Added env var: " << envVar << std::endl;  // Debug output
 		}
@@ -171,12 +175,28 @@ bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const s
 			const_cast<char*>(scriptPath.c_str()),
 			NULL
 		};
-
-		execve(interpreter.c_str(), args, &envp[0]);
+		std::cerr << "Envp:" << std::endl;
+		for (size_t i = 0; i < envp.size() - 1; ++i) {
+    		std::cerr << "[" << i << "]: " << (envp[i] ? envp[i] : "NULL") << std::endl;
+		}
+		std::cerr << "About to execve:\n";
+		std::cerr << "Interpreter: " << interpreter << "\n";
+		std::cerr << "Script: " << scriptPath << "\n";
+		std::cerr << "Args:\n";
+		for (int i = 0; args[i] != NULL; ++i)
+			std::cerr << "  args[" << i << "]: " << args[i] << "\n";
+		std::cerr << "Envp:\n";
+		for (size_t i = 0; i < envp.size(); ++i)
+    		std::cerr << "  envp[" << i << "]: " << envp[i] << "\n";
+		int ret = execve(interpreter.c_str(), args, &envp[0]);
 
 		// If we reach here, execve failed
 		std::cerr << "❌ execve failed"<< std::endl;
-		exit(1);
+		std::cerr << "After execve , ret=" << ret << ", errno=" << errno << std::endl;
+		//_exit(1) avoids flushin parent buffers and causing undefined behavior after fork
+		perror("execve failed");
+		std::cerr << "About to exit\n" ;
+		_exit(1);
 	} else {
 		// Parent process: read the output
 //		std::cout << "👨‍👩‍👧‍👦 Parent process: reading script output" << std::endl;
@@ -190,10 +210,10 @@ bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const s
 		client->setCgiFds(inputPipe[1], outputPipe[0]);
 		client->setCgiPid(pid);
 		client->markCgiRunning();
+		client->setCgiStartTime(time(NULL)); //to track for timeout
 
 		// Add to pollfds
-		struct pollfd outPoll;
-		struct pollfd inPoll;
+		struct pollfd outPoll, inPoll;
 		
 		outPoll.fd = outputPipe[0];
 		outPoll.events = POLLIN;
@@ -208,67 +228,104 @@ bool	setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const s
 
 		return true;
 	}
-				}
+}
+*/
 
-/*		// Send POST data to script if any
-		std::string body = req.getBody();
-		if (!body.empty() && req.getMethod() == "POST") {
-//			std::cout << "📤 Sending POST data to script (" << body.size() << " bytes)" << std::endl;
-			write(inputPipe[1], body.c_str(), body.size());
-		}
-		close(inputPipe[1]); // Close input pipe
+bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
+              const std::string& interpreter, const std::string& scriptPath,
+              const Request& req) {
 
-		int status = 0;
-		time_t start = time(NULL);
-		bool timetokill = false;
-		while (true) {
-			pid_t result = waitpid(pid, &status, WNOHANG);
+    int outputPipe[2];
+    int inputPipe[2];
 
-			if (result == pid) break; //child has finished
-			if (result == -1) {
-				std::cerr << "❌ waitpid error\n";
-				break;
-			}
-			if (time(NULL) - start > 5) { //for a process kill if exceed timout of 5 seconds
-				std::cerr << "⏰ CGI timeout, killing child 🔪🩸😵\n";
-				kill(pid, SIGKILL);
-				waitpid(pid, &status, 0);
-				timetokill = true;
-				break;
-			}
-			usleep(100000); //sleep for 100ms before retrying again.
-		}
-		if (timetokill) {
-			std::cout << "⚠️ CGI script execution timed out" << std::endl;
-			close(outputPipe[0]);
-			return "HTTP/1.1 504 Gateway Timeout\r\n"
-					"Content-Type: text/html\r\n\r\n"
-					"<html><body><h1>504 Gateway Timeout</h1></body></html>";
-		}
-		else
-			waitpid(pid, &status, 0);
-		// Read all output from the script
-		std::string output;
-		char buffer[8192];
-		ssize_t bytesRead;
-		while ((bytesRead = read(outputPipe[0], buffer, sizeof(buffer))) > 0) {
-			output.append(buffer, bytesRead);
-		}
+    if (pipe(outputPipe) == -1 || pipe(inputPipe) == -1) {
+        std::cerr << "❌ Failed to create pipes" << std::endl;
+        return false;
+    }
 
-		close(outputPipe[0]);
+    pid_t pid = fork();
+    if (pid < 0) {
+        std::cerr << "❌ Fork failed" << std::endl;
+        close(outputPipe[0]); close(outputPipe[1]);
+        close(inputPipe[0]); close(inputPipe[1]);
+        return false;
+    }
 
-		// Wait for child process to finish	
-		if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-			std::cout << "✅ Script executed successfully" << std::endl;
-		}
-		else {
-			std::cout << "⚠️ Script exited with status: " << WEXITSTATUS(status) << std::endl;
-		}
+    if (pid == 0) {
+        // Child process
 
-		// Format the output as a proper HTTP response
-		return formatCGIResponse(output);
-	}
-}*/
+        dup2(inputPipe[0], STDIN_FILENO);
+        dup2(outputPipe[1], STDOUT_FILENO);
+
+        close(outputPipe[0]); close(outputPipe[1]);
+        close(inputPipe[0]); close(inputPipe[1]);
+
+        std::vector<std::string> envStrings;
+        envStrings.push_back("REQUEST_METHOD=" + req.getMethod());
+        envStrings.push_back("QUERY_STRING=" + req.getQuery());
+        envStrings.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
+        envStrings.push_back("CONTENT_LENGTH=" + intToStr(req.getBody().length()));
+        envStrings.push_back("GATEWAY_INTERFACE=CGI/1.1");
+        envStrings.push_back("SERVER_PROTOCOL=HTTP/1.1");
+        envStrings.push_back("SCRIPT_NAME=" + scriptPath);
+        if (scriptPath.find(".php") != std::string::npos) {
+            envStrings.push_back("SCRIPT_FILENAME=" + scriptPath);
+            envStrings.push_back("REDIRECT_STATUS=200");
+        }
+
+        const std::map<std::string, std::string>& headers = req.getHeaders();
+        for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+            std::string httpVar = "HTTP_";
+            for (size_t i = 0; i < it->first.length(); ++i) {
+                char c = it->first[i];
+                httpVar += (c == '-') ? '_' : std::toupper(static_cast<unsigned char>(c));
+            }
+            envStrings.push_back(httpVar + "=" + it->second);
+        }
+
+        std::vector<char*> envp;
+        for (size_t i = 0; i < envStrings.size(); ++i) {
+            envp.push_back(const_cast<char*>(envStrings[i].c_str()));
+        }
+        envp.push_back(NULL);
+
+        char* args[] = {
+            const_cast<char*>(interpreter.c_str()),
+            const_cast<char*>(scriptPath.c_str()),
+            NULL
+        };
+
+        std::cerr << "About to execve:\nInterpreter: " << interpreter << "\nScript: " << scriptPath << "\n";
+        for (int i = 0; args[i]; ++i)
+            std::cerr << "  args[" << i << "]: " << args[i] << "\n";
+
+        int ret = execve(interpreter.c_str(), args, &envp[0]);
+        std::cerr << "❌ execve failed, ret=" << ret << ", errno=" << errno << "\n";
+        perror("execve failed");
+        _exit(1);
+    } else {
+        // Parent process
+        close(inputPipe[0]);
+        close(outputPipe[1]);
+
+        fcntl(inputPipe[1], F_SETFL, O_NONBLOCK);
+        fcntl(outputPipe[0], F_SETFL, O_NONBLOCK);
+
+        client->setCgiFds(inputPipe[1], outputPipe[0]);
+        client->setCgiPid(pid);
+        client->markCgiRunning();
+        client->setCgiStartTime(time(NULL));
+
+        struct pollfd outPoll = {outputPipe[0], POLLIN, 0};
+        struct pollfd inPoll = {inputPipe[1], POLLOUT, 0};
+
+        fds.push_back(outPoll);
+        fds.push_back(inPoll);
+
+        return true;
+    }
+}
+
 
 // Helper function to format CGI output as HTTP response
 std::string formatCGIResponse(const std::string& scriptOutput) {

@@ -3,18 +3,30 @@
 /*                                                        :::      ::::::::   */
 /*   Method.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/07 15:48:02 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/08 01:32:55 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "WebServ.hpp"
 
-bool handleGet(ClientConnection* client, int fd, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const Request& req, 
+	const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+	
+	if (path == "/appspecific/com.chrome.devtools.json" || path == "/.well-known/appspecific/com.chrome.devtools.json") {
+		//ignore the request
+		std::string response = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n";;
+		client->setPendingResponse(response);
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == client->getFd())
+				fds[j].events |= POLLOUT;
+		}
+		return true;
+	}
 	std::cout << "📥 Handling GET request for " << path << std::endl;
-
+	
 	// First: Check if this is a CGI request FIRST (highest priority)
 	if (path.find("/cgi-bin/") == 0) {
 
@@ -24,62 +36,74 @@ bool handleGet(ClientConnection* client, int fd, std::vector<struct pollfd>& fds
 		}
 		return true;
 	}
-
+	
 	// NEW: Handle API endpoint for listing uploaded files
 	if (path == "/api/photos" || path == "/api/files") {
-		std::string uploadDir = "www/upload"; // or use location.upload_path
+		std::string uploadDir = location.upload_path.empty() ? "www/upload" : location.upload_path;
 		std::string jsonResponse = generateJsonDirectoryListing(uploadDir);
 
 		// Send JSON response
 		std::string response = Response::build(200, jsonResponse, "application/json");
-		if (!safeSend(fd, response))
-			return false;
+		client->setPendingResponse(response);
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == client->getFd())
+				fds[j].events |= POLLOUT;
+		}
 		return true;
 	}
-
+	// Add this at the start of handleGet
+	std::string effectivePath = path;
+	if (effectivePath == "/")
+   		effectivePath = "/" + config.index; // config.index should be "index.html"
 	// Check if path is a directory and autoindex is enabled
-	std::string fullPath = location.root + path;
-//	std::cout << "🔧 DEBUG: fullPath = '" << fullPath << "'" << std::endl;
-
-
+	std::string fullPath = location.root + effectivePath;
+	
+	if (fileExists(fullPath)) {
+   		serveStaticFile(effectivePath, config, client, fds);
+   		return true;
+	}
 	if (isDirectory(fullPath)) {
 		std::cout << "📁 Path is directory" << std::endl;
 		if (location.autoindex) {
-			std::cout << "📁 Serving directory listing for " << path << std::endl;
+			//std::cout << "📁 Serving directory listing for " << path << std::endl;
 			// For now, send a simple directory listing instead of complex function
 			std::string body = generateSimpleDirectoryListing(fullPath, path);
-			sendHtmlResponse(fd, 200, body);
+			std::string response = Response::build(200, body, "text/html");
+			client->setPendingResponse(response);
+			for (size_t j = 0; j < fds.size(); ++j) {
+				if (fds[j].fd == client->getFd())
+					fds[j].events |= POLLOUT;
+			}
+			return true;
+
 		} else {
 			// Try to serve index file
 			std::string indexPath = fullPath + "/" + config.index;
 			if (fileExists(indexPath)) {
-				serveStaticFile(indexPath, fd, config);
+				serveStaticFile(indexPath, config, client, fds);
 				return true;
 			} else {
-				std::cout << "❌ Directory access forbidden: " << path << std::endl;
+				//std::cout << "❌ Directory access forbidden: " << path << std::endl;
 				std::string body = getErrorPageBody(403, config);
-				sendHtmlResponse(fd, 403, body);
+				sendHtmlResponse(403, body, client, fds);
 				return false;
 			}
 		}
 	}
-	else{
-		// Serve static file
-		serveStaticFile(path, fd, config);
-//		std::cout << "✅ serveStaticFile call completed" << std::endl;
-		return true;
-	}
-	return true;
+	//not found
+	std::string body = getErrorPageBody(404, config);
+	sendHtmlResponse(404, body, client, fds);
+	return false;
 }
 
-bool handlePost(ClientConnection* client, int fd, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+bool handlePost(ClientConnection* client, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
 	std::cout << "📤 Handling POST request for " << path << std::endl;
 
 	(void)location; // Suppress unused warning, as location is not used in this example
 	if (req.getBody().size() > static_cast<size_t>(config.client_max_body_size)) {
 		std::cerr << "❌ Request body exceeds client_max_body_size\n";
 		std::string errorBody = getErrorPageBody(413, config); // 413 Payload Too Large
-		sendHtmlResponse(fd, 413, errorBody);
+		sendHtmlResponse(413, errorBody, client, fds);
 		return false;
 	}
 	// Check if this is a file upload
@@ -87,7 +111,7 @@ bool handlePost(ClientConnection* client, int fd, std::vector<struct pollfd>& fd
 		std::cout << "📁 This is a file upload request" << std::endl;
 		// Simple file upload handling - you can expand this
 		std::string rawRequest = req.getRawRequest();
-		handleSimpleUpload(rawRequest, fd, config);
+		handleSimpleUpload(rawRequest, config, client, fds);
 		return true;
 	}
 
@@ -116,11 +140,12 @@ bool handlePost(ClientConnection* client, int fd, std::vector<struct pollfd>& fd
 
 	body += "<p><a href='/'>← Back to Home</a></p>";
 	body += "</body></html>";
-	sendHtmlResponse(fd, 200, body);
+	sendHtmlResponse(200, body, client, fds);
 	return true;
 }
 
-void handlePut(int fd, const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+void handlePut(const Request& req, const std::string& path, const LocationConfig& location, const ServerConfig& config,
+			ClientConnection* client, std::vector<struct pollfd>& fds) {
 	std::cout << "📝 Handling PUT request for " << path << std::endl;
 
 	// Check if this is a rename operation (look for X-Rename-To header)
@@ -129,17 +154,18 @@ void handlePut(int fd, const Request& req, const std::string& path, const Locati
 
 	if (renameIt != headers.end() && !renameIt->second.empty()) {
 		// This is a RENAME operation
-		handleFileRename(fd, path, renameIt->second, location, config);
+		handleFileRename(path, renameIt->second, location, config, client, fds);
 		return;
 	}
 
 	// This is a regular UPLOAD operation
-	handleFileUpload(fd, req, path, location, config);
+	handleFileUpload(req, path, location, config, client, fds);
 }
 
 // NEW FUNCTION: Handle file renaming
-void handleFileRename(int fd, const std::string& path, const std::string& newName,
-					const LocationConfig& location, const ServerConfig& config) {
+void handleFileRename(const std::string& path, const std::string& newName,
+					const LocationConfig& location, const ServerConfig& config,
+					ClientConnection* client, std::vector<struct pollfd>& fds) {
 	std::cout << "🏷️ Handling file rename operation" << std::endl;
 
 	// Extract current filename from path
@@ -152,7 +178,7 @@ void handleFileRename(int fd, const std::string& path, const std::string& newNam
 	if (newName.empty()) {
 		std::cout << "❌ New filename is empty" << std::endl;
 		std::string body = getErrorPageBody(400, config);
-		sendHtmlResponse(fd, 400, body);
+		sendHtmlResponse(400, body, client, fds);
 		return;
 	}
 
@@ -162,7 +188,7 @@ void handleFileRename(int fd, const std::string& path, const std::string& newNam
 		newName.find("\\") != std::string::npos) {
 		std::cout << "❌ Invalid characters in new filename: " << newName << std::endl;
 		std::string body = getErrorPageBody(400, config);
-		sendHtmlResponse(fd, 400, body);
+		sendHtmlResponse(400, body, client, fds);
 		return;
 	}
 
@@ -179,7 +205,7 @@ void handleFileRename(int fd, const std::string& path, const std::string& newNam
 	if (!fileExists(currentPath)) {
 		std::cout << "❌ File not found for rename: " << currentPath << std::endl;
 		std::string body = getErrorPageBody(404, config);
-		sendHtmlResponse(fd, 404, body);
+		sendHtmlResponse(404, body, client, fds);
 		return;
 	}
 
@@ -187,7 +213,7 @@ void handleFileRename(int fd, const std::string& path, const std::string& newNam
 	if (fileExists(newPath) && newPath != currentPath) {
 		std::cout << "❌ File already exists with new name: " << newPath << std::endl;
 		std::string body = "Error: A file with that name already exists";
-		sendHtmlResponse(fd, 409, body); // 409 Conflict
+		sendHtmlResponse(409, body, client, fds); // 409 Conflict
 		return;
 	}
 
@@ -197,17 +223,18 @@ void handleFileRename(int fd, const std::string& path, const std::string& newNam
 
 		// Send success response
 		std::string responseBody = "File renamed successfully: " + currentFilename + " → " + newName;
-		sendHtmlResponse(fd, 200, responseBody);
+		sendHtmlResponse(200, responseBody, client, fds);
 	} else {
 		std::cout << "❌ Failed to rename file"<< std::endl;
 		std::string body = getErrorPageBody(500, config);
-		sendHtmlResponse(fd, 500, body);
+		sendHtmlResponse(500, body, client, fds);
 	}
 }
 
 // NEW FUNCTION: Handle regular file upload (your existing logic)
-void handleFileUpload(int fd, const Request& req, const std::string& path,
-					const LocationConfig& location, const ServerConfig& config) {
+void handleFileUpload(const Request& req, const std::string& path,
+		const LocationConfig& location, const ServerConfig& config,
+		ClientConnection* client, std::vector<struct pollfd>& fds) {
 	std::cout << "📁 Handling file upload operation" << std::endl;
 
 	// Extract filename from path
@@ -228,7 +255,7 @@ void handleFileUpload(int fd, const Request& req, const std::string& path,
 	if (filename.find("..") != std::string::npos || filename.find("/") != std::string::npos) {
 		std::cout << "❌ Invalid filename in PUT request: " << filename << std::endl;
 		std::string body = getErrorPageBody(400, config);
-		sendHtmlResponse(fd, 400, body);
+		sendHtmlResponse(400, body, client, fds);
 		return;
 	}
 
@@ -242,7 +269,7 @@ void handleFileUpload(int fd, const Request& req, const std::string& path,
 	if (!file.is_open()) {
 		std::cout << "❌ Cannot create file: " << fullPath << std::endl;
 		std::string errorBody = getErrorPageBody(500, config);
-		sendHtmlResponse(fd, 500, errorBody);
+		sendHtmlResponse(500, errorBody, client, fds);
 		return;
 	}
 
@@ -250,15 +277,17 @@ void handleFileUpload(int fd, const Request& req, const std::string& path,
 	if (file.fail()) {
 		std::cerr << "❌ Error writing handleFileUpload" << std::endl;
 		file.close();
+		std::cerr << "in MEthod function close\n";
 		return;
 	}
 	file.close();
+	std::cerr << "in method function close 2\n";
 
 	// Check if file was written successfully
 	if (!fileExists(fullPath)) {
 		std::cout << "❌ File was not created successfully: " << fullPath << std::endl;
 		std::string errorBody = getErrorPageBody(500, config);
-		sendHtmlResponse(fd, 500, errorBody);
+		sendHtmlResponse(500, errorBody, client, fds);
 		return;
 	}
 
@@ -266,10 +295,11 @@ void handleFileUpload(int fd, const Request& req, const std::string& path,
 
 	// Send success response
 	std::string responseBody = "File uploaded successfully: " + filename;
-	sendHtmlResponse(fd, 201, responseBody); // 201 Created
+	sendHtmlResponse(201, responseBody, client, fds); // 201 Created
 }
 
-void handleDelete(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+void handleDelete(const std::string& path, const LocationConfig& location, const ServerConfig& config,
+	ClientConnection* client, std::vector<struct pollfd>& fds) {
 	std::cout << "🗑️ Handling DELETE request for " << path << std::endl;
 
 	// Extract filename from path
@@ -290,7 +320,7 @@ void handleDelete(int fd, const std::string& path, const LocationConfig& locatio
 	if (filename.find("..") != std::string::npos || filename.find("/") != std::string::npos) {
 		std::cout << "❌ Invalid filename in DELETE request: " << filename << std::endl;
 		std::string body = getErrorPageBody(400, config);
-		sendHtmlResponse(fd, 400, body);
+		sendHtmlResponse(400, body, client, fds);
 		return;
 	}
 
@@ -298,7 +328,7 @@ void handleDelete(int fd, const std::string& path, const LocationConfig& locatio
 	if (!fileExists(fullPath)) {
 		std::cout << "❌ File not found for deletion: " << fullPath << std::endl;
 		std::string body = getErrorPageBody(404, config);
-		sendHtmlResponse(fd, 404, body);
+		sendHtmlResponse(404, body, client, fds);
 		return;
 	}
 
@@ -306,7 +336,7 @@ void handleDelete(int fd, const std::string& path, const LocationConfig& locatio
 	if (std::remove(fullPath.c_str()) != 0) {
 		std::cout << "❌ Failed to delete file: " << fullPath << std::endl;
 		std::string body = getErrorPageBody(500, config);
-		sendHtmlResponse(fd, 500, body);
+		sendHtmlResponse(500, body, client, fds);
 		return;
 	}
 
@@ -314,22 +344,26 @@ void handleDelete(int fd, const std::string& path, const LocationConfig& locatio
 
 	// Send success response
 	std::string responseBody = "File deleted successfully: " + filename;
-	sendHtmlResponse(fd, 200, responseBody); // 200 OK
+	sendHtmlResponse(200, responseBody, client, fds); // 200 OK
 }
 
-bool handleHead(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config) {
+bool handleHead(int fd, const std::string& path, const LocationConfig& location, const ServerConfig& config, ClientConnection* client, std::vector<struct pollfd>& fds) {
 	std::cout << "📋 Handling HEAD request for " << path << std::endl;
 	//for now
 	(void)config;  // Add this line to suppress warning
 
 	// HEAD is like GET but without the response body
 	std::string fullPath = location.root + path;
+	std::cout << "DEBUG: fullPath = '" << fullPath << "'" << std::endl;
 
 	if (!fileExists(fullPath)) {
 		// Send 404 headers only (no body)
 		std::string headers = Response::buildHeader(404, 0, "text/html");
-		if (!safeSend(fd, headers))
-			return false;
+		client->setPendingResponse(headers);
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == fd)
+				fds[j].events |= POLLOUT;
+		}
 
 		return true;
 	}
@@ -338,21 +372,28 @@ bool handleHead(int fd, const std::string& path, const LocationConfig& location,
 	std::ifstream file(fullPath.c_str(), std::ios::binary | std::ios::ate);
 	if (!file.is_open()) {
 		std::string headers = Response::buildHeader(500, 0, "text/html");
-		if (!safeSend(fd, headers))
-			return false;
+		client->setPendingResponse(headers);
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == fd)
+				fds[j].events |= POLLOUT;
+		}
 		return true;
 	}
 
 	size_t fileSize = file.tellg();
 	file.close();
+	std::cerr << "in method function close 3\n";
 
 	// Determine content type
 	std::string contentType = Response::getContentType(fullPath);
 
 	// Send headers only (no body for HEAD request)
 	std::string headers = Response::buildHeader(200, fileSize, contentType);
-	if (!safeSend(fd, headers))
-		return false;
+	client->setPendingResponse(headers);
+	for (size_t j = 0; j < fds.size(); ++j) {
+		if (fds[j].fd == fd)
+			fds[j].events |= POLLOUT;
+	}
 	return true;
 }
 
@@ -475,13 +516,13 @@ std::string rewriteURL(const std::string& path, const ServerConfig& config, cons
 	return path;
 }
 
-void handleSimpleUpload(const std::string& request, int client_fd, const ServerConfig& config) {
+void handleSimpleUpload(const std::string& request, const ServerConfig& config, ClientConnection* client, std::vector<struct pollfd>& fds) {
 
 	// Step 1: Extract boundary
 	std::string boundary = extractBoundary(request);
 	if (boundary.empty()) {
 		std::cerr << "❌ No boundary found in request" << std::endl;
-		sendHtmlResponse(client_fd, 400, getErrorPageBody(400, config));
+		sendHtmlResponse(400, getErrorPageBody(400, config), client, fds);
 		return;
 	}
 
@@ -550,7 +591,7 @@ void handleSimpleUpload(const std::string& request, int client_fd, const ServerC
 	// Step 5: Response system
 	if (successfulUploads.empty() && failedUploads.empty()) {
 		std::cerr << "❌ No files found in request" << std::endl;
-		sendHtmlResponse(client_fd, 400, getErrorPageBody(400, config));
+		sendHtmlResponse(400, getErrorPageBody(400, config), client, fds);
 		return;
 	}
 
@@ -561,12 +602,12 @@ void handleSimpleUpload(const std::string& request, int client_fd, const ServerC
 							(intToStr(successfulUploads.size()) + " files");
 
 		std::string successResponse = loadAndProcessSuccessTemplate(config, filename);
-		sendHtmlResponse(client_fd, 200, successResponse);
+		sendHtmlResponse(200, successResponse, client, fds);
 		std::cout << "📤 All " << successfulUploads.size() << " files uploaded successfully!" << std::endl;
 	} else {
 		// Some or all files failed - error system
 		std::string errorBody = getErrorPageBody(400, config);
-		sendHtmlResponse(client_fd, 400, errorBody);
+		sendHtmlResponse(400, errorBody, client, fds);
 		std::cout << "❌ Upload failed for " << failedUploads.size() << " files" << std::endl;
 	}
 }
