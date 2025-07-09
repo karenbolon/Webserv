@@ -6,7 +6,7 @@
 /*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/09 18:47:51 by keramos-         ###   ########.fr       */
+/*   Updated: 2025/07/09 18:56:11 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,47 +115,66 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				handleCgiPipeFd(fd, revents, fds, clients);
 				++i; continue;
 			}
-			// ✅ UPDATED: Simplified crash detection that doesn't interfere with timeout
+			// ✅ ADD THIS: Check for CGI script crashes BEFORE timeout check
 			if (client->isCgiRunning()) {
-				int status;
-				pid_t result = waitpid(client->getCgiPid(), &status, WNOHANG);
-				if (result > 0 && WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-					// Only handle immediate crashes, let timeout handle hanging processes
-					std::cout << "💥 CGI script crashed immediately with code: " << WEXITSTATUS(status) << std::endl;
+			int status;
+			pid_t result = waitpid(client->getCgiPid(), &status, WNOHANG);
+			if (result > 0) {
+				// CGI process has exited (either crashed or finished)
+				std::cout << "🔍 CGI process " << client->getCgiPid() << " has exited" << std::endl;
 
-					// Clean up pipes
-					if (client->getCgiOutputFd() != -1) {
-						close(client->getCgiOutputFd());
-						removePollFd(fds, client->getCgiOutputFd());
+				if (WIFEXITED(status)) {
+					int exit_code = WEXITSTATUS(status);
+					std::cout << "🔍 CGI exit code: " << exit_code << std::endl;
+
+					if (exit_code != 0) {
+						// ✅ Script crashed - serve 500 error page
+						std::cout << "💥 CGI script crashed, serving 500 error page" << std::endl;
+
+						// Clean up pipes
+						if (client->getCgiOutputFd() != -1) {
+							close(client->getCgiOutputFd());
+							removePollFd(fds, client->getCgiOutputFd());
+						}
+						if (client->getCgiInputFd() != -1) {
+							close(client->getCgiInputFd());
+							removePollFd(fds, client->getCgiInputFd());
+						}
+
+						// Serve configured 500 error page
+						const ServerConfig& config = clientToServer[client->getFd()]->getConfig();
+						std::string errorBody = getErrorPageBody(500, config);
+						std::string errorResponse = Response::build(500, errorBody, "text/html");
+
+						client->setPendingResponse(errorResponse);
+						client->setCgiFds(-1, -1);
+						client->markCgiDone();
+
+						for (size_t j = 0; j < fds.size(); ++j)
+							if (fds[j].fd == client->getFd())
+								fds[j].events |= POLLOUT;
+
+						++i;
+						continue;
+						} else {
+							// ✅ Script finished normally (exit code 0)
+							// Let normal CGI output processing handle it
+							std::cout << "✅ CGI script finished normally" << std::endl;
+							if (client->getCgiOutputFd() == -1) {
+								client->markCgiDone();
+							}
+						}
+					} else if (WIFSIGNALED(status)) {
+						// ✅ Process was killed by signal (like timeout kill)
+						int signal = WTERMSIG(status);
+						std::cout << "💀 CGI process killed by signal: " << signal << std::endl;
+						// Don't generate error here - let timeout handler deal with it
 					}
-					if (client->getCgiInputFd() != -1) {
-						close(client->getCgiInputFd());
-						removePollFd(fds, client->getCgiInputFd());
-					}
-
-					// Serve configured 500 error page
-					const ServerConfig& config = clientToServer[client->getFd()]->getConfig();
-					std::string errorBody = getErrorPageBody(500, config);
-					std::string errorResponse = Response::build(500, errorBody, "text/html");
-
-					client->setPendingResponse(errorResponse);
-					client->setCgiFds(-1, -1);
-					client->markCgiDone();
-
-					for (size_t j = 0; j < fds.size(); ++j)
-						if (fds[j].fd == client->getFd())
-							fds[j].events |= POLLOUT;
-
-					++i;
-					continue;
 				}
+				// ✅ IMPORTANT: If result == 0, process is still running - let timeout handle it
 			}
 
-			if (checkCgiTimeout(client, fds)) {
-				std::cout << "⚡ CGI timeout handled, continuing to next client" << std::endl;
-				++i;
-				continue;
-			}
+			checkCgiTimeout(client, fds);
 
 			// === CGI STDOUT ===
 			if ((revents & POLLIN) && fd == client->getCgiOutputFd()) {
@@ -230,8 +249,6 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 
 			// === Client POLLOUT (static or chunked) ===
 			if ((revents & POLLOUT) && fd == client->getFd() && client->wantsToWrite()) {
-				std::cout << "📤 POLLOUT: Sending response to fd " << fd << std::endl;
-				std::cout << "📏 Response size: " << client->getPendingSendBuffer().size() << " bytes" << std::endl;
 				std::string& buf = client->getPendingSendBuffer();
 				size_t& sent = client->getBytesSentSoFar();
 				ssize_t n = send(fd, buf.c_str() + sent, buf.size() - sent, 0);
@@ -290,83 +307,44 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 
 
 
-bool checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
+void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
 	if (!client->isCgiRunning())
-		return false;
+		return;
+	int status;
+	pid_t result = waitpid(client->getCgiPid(), &status, WNOHANG);
+	if (result > 0) {
+		// Process has exited
+		std::cout << "🔍 CGI process " << client->getCgiPid() << " has exited" << std::endl;
 
+		// If exit code is 0, process finished normally, continue with normal CGI output processing
+		if (client->getCgiOutputFd() == -1) {
+			client->markCgiDone();
+		}
+		return;
+	}
 	time_t now = time(NULL);
-	time_t elapsed = now - client->getCgiStartTime();
-
-	if (elapsed > 10) {
-		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << " after " << elapsed << " seconds" << std::endl;
-
-		// ✅ Force kill the CGI process
+	if (now - client->getCgiStartTime() > 10) {
+		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << ", killing 🔪🩸😵\n\n";
 		kill(client->getCgiPid(), SIGKILL);
 
-		// ✅ Give it a moment to die, then reap it
-		usleep(100000); // 100ms
+		//reap the child process to prevent zombies
 		int status;
-		pid_t result = waitpid(client->getCgiPid(), &status, WNOHANG);
-		if (result <= 0) {
-			// Still not dead, wait a bit more
-			usleep(500000); // 500ms
-			waitpid(client->getCgiPid(), &status, WNOHANG);
-		}
+		waitpid(client->getCgiPid(), &status, WNOHANG);
 
-		std::cout << "💀 CGI process killed and reaped" << std::endl;
-
-		// ✅ Close pipe FDs and remove from poll
+		//close pipe FDs
 		if (client->getCgiOutputFd() != -1) {
-			std::cout << "🔧 Closing CGI output fd " << client->getCgiOutputFd() << std::endl;
 			close(client->getCgiOutputFd());
 			removePollFd(fds, client->getCgiOutputFd());
 		}
 		if (client->getCgiInputFd() != -1) {
-			std::cout << "🔧 Closing CGI input fd " << client->getCgiInputFd() << std::endl;
 			close(client->getCgiInputFd());
 			removePollFd(fds, client->getCgiInputFd());
 		}
 
-		// ✅ Clear CGI state BEFORE setting response
+		//set both FDs ot -11 BEFORE markCgiDone
 		client->setCgiFds(-1, -1);
 		client->markCgiDone();
-
-		// ✅ Generate timeout error response
-		std::cout << "📤 Generating 504 timeout response" << std::endl;
-
-		std::string timeoutResponse = "HTTP/1.1 504 Gateway Timeout\r\n"
-									"Content-Type: text/html; charset=utf-8\r\n"
-									"Content-Length: 150\r\n"
-									"Connection: close\r\n"
-									"\r\n"
-									"<html><body>"
-									"<h1>504 Gateway Timeout</h1>"
-									"<p>The CGI script took too long to respond and was terminated.</p>"
-									"<p><a href='/'>Go Home</a></p>"
-									"</body></html>";
-
-		client->setPendingResponse(timeoutResponse);
-
-		// ✅ Force mark client for POLLOUT to send response
-		bool foundClient = false;
-		for (size_t j = 0; j < fds.size(); ++j) {
-			if (fds[j].fd == client->getFd()) {
-				fds[j].events |= POLLOUT;
-				foundClient = true;
-				std::cout << "✅ Marked client fd " << client->getFd() << " for POLLOUT" << std::endl;
-				break;
-			}
-		}
-
-		if (!foundClient) {
-			std::cerr << "❌ Could not find client fd " << client->getFd() << " in poll fds!" << std::endl;
-		}
-
-		std::cout << "✅ Timeout handling complete" << std::endl;
-        return true;  // ✅ Indicate timeout was handled
-    }
-
-    return false;  // ✅ No timeout
+	}
 }
 
 bool	methodAllowed(const std::string& method, const std::vector<std::string>& allowed) {
