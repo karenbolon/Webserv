@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.hpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:30 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 19:09:56 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 19:02:53 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,6 +75,7 @@ class ClientConnection {
     void              setCgiPid(pid_t pid);
     void              markCgiRunning();
     void              markCgiDone();
+    void              setCgiRunning(bool val);
     bool              isCgiRunning() const;
     bool              isCgiDone() const;
     pid_t             getCgiPid() const;
@@ -97,6 +98,7 @@ class ClientConnection {
     bool              isChunkedDone() const;
     bool              isChunkedError() const;
     void              resetChunkedFlags();
+    void              closeCgiFds();
      
     std::string	      getRawRequest() const;
     

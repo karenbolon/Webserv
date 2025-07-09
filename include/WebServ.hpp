@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/07/09 16:44:26 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 18:47:44 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -164,7 +164,7 @@ bool		setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 				const Request& req);
 void 		processClientRequest(int fd, std::vector<struct pollfd>& fds, std::map<int, ClientConnection*>& clients,
 				std::map<int, ServerSocket*>& clientToServer);
-void		checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& clientToServer);
+void		checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds);
 std::string getFileExtension(const std::string& filename);
 bool 		hasCGIExtension(const std::string& path, const ServerConfig& config);
 bool 		sendNextChunk(ClientConnection* client);

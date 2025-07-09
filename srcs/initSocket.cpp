@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/09 18:16:52 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 19:01:09 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,8 +92,8 @@ void runEventLoop(std::vector<struct pollfd>& fds,
                   std::map<int, ServerSocket*>& clientToServer) 
 {
 	while (g_signal != 0) {
-		//int ready = poll(&fds[0], fds.size(), -1);
-		int ready = poll(&fds[0], fds.size(), 100); //100 ms 
+		int ready = poll(&fds[0], fds.size(), -1);
+		//int ready = poll(&fds[0], fds.size(), 100); //100 ms 
 		if (ready < 0) {
 			if (errno == EINTR) continue;
 			std::cerr << "❌ Poll() error\n";
@@ -166,7 +166,9 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					}
 				}
 			}
-			checkCgiTimeout(client, fds, clientToServer);
+			for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it) {
+				checkCgiTimeout(it->second, fds);
+		}
 
 			// === CGI STDOUT ===
 			if ((revents & POLLIN) && fd == client->getCgiOutputFd()) {
@@ -252,7 +254,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				int recvResult = client->recvFullRequest(fd, clientToServer[fd]->getConfig(), client, fds);
 				if (recvResult <= 0) {
 					if (recvResult == 0) {
-						std::cerr << "❌ Client disconnected on fd " << fd << "\n";
+						std::cerr << "💔 Client disconnected on fd " << fd << "\n";
 					} else {
 						std::cerr << "❌ Receive failed on client fd " << fd << "\n";
 					}
@@ -273,7 +275,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 										
 				if (n <= 0) {
 					if (n == 0) {
-						std::cerr << "❌ Client disconnected on fd " << fd << "\n";
+						std::cerr << "💔 Client disconnected on fd " << fd << "\n";
 					} else {
 						std::cerr << "❌ Send failed on client fd " << fd << "\n";
 					}
@@ -330,7 +332,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 
 
 
-void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& clientToServer) {
+void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
 	if (!client->isCgiRunning())
 		return;
 	
@@ -338,9 +340,9 @@ void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds, 
 	if (now - client->getCgiStartTime() > 10) {
 		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << ", killing 🔪🩸😵\n\n";
 		
-		std::string partial = client->getCgiOutputBuffer().substr(0, 200);
-		if (!partial.empty())
-       		std::cerr << "📝 Partial CGI output: " << partial << std::endl;
+		//std::string partial = client->getCgiOutputBuffer().substr(0, 200);
+		//if (!partial.empty())
+       	//	std::cerr << "📝 Partial CGI output: " << partial << std::endl;
 		kill(client->getCgiPid(), SIGKILL);
 		
 		//reap the child process to prevent zombies
@@ -359,12 +361,12 @@ void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds, 
 		
 		//set both FDs ot -11 BEFORE markCgiDone
 		client->setCgiFds(-1, -1);
+		client->setCgiRunning(false);
 		client->markCgiDone();
 		
-		//Send 500 response!
-		const ServerConfig& config = clientToServer[client->getFd()]->getConfig();
-		std::string body = getErrorPageBody(500, config);
-		std::string response = Response::build(500, body, "text/html");
+		//Send 504 response!
+		std::string body = "<html><body><h1>504 Gateway Timeout</h1></body></html>";
+		std::string response = Response::build(504, body, "text/html");
 		client->setPendingResponse(response);
 		
 		//Ensure it gets sent
