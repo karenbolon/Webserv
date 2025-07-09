@@ -10,9 +10,13 @@ import cgitb
 import os
 import sys
 import urllib.parse
+import signal
 from datetime import datetime, timedelta
 import random
 import json
+
+# Avoid broken pipe crashes
+#signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 # Enable CGI error reporting for debugging
 cgitb.enable()
