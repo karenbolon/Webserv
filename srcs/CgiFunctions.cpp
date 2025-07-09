@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiFunctions.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 20:59:35 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 17:41:27 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,51 +43,52 @@ const LocationConfig* findMatchingLocation(const std::string& path, const Server
 
 
 bool handleSimpleCGI(ClientConnection* client, std::vector<struct pollfd>& fds, const Request& req, const std::string& path, const ServerConfig& config) {
-//	std::cout << "🚀 Starting Simple CGI execution for: " << path << std::endl;
+std::cout << "🚀 Starting CGI execution for: " << path << std::endl;
 
-	// Step 1: Find the interpreter for this script
-	std::string interpreter = getInterpreter(path, config);
-	if (interpreter.empty()) {
-		std::cerr << "❌ No interpreter found for " << path << std::endl;
-		std::string errorBody = getErrorPageBody(500, config);
-		sendHtmlResponse(500, errorBody, client, fds);
-		return false;
-	}
+    // Step 1: Find the interpreter for this script
+    std::string interpreter = getInterpreter(path, config);
+    if (interpreter.empty()) {
+        std::cerr << "❌ No interpreter found for " << path << std::endl;
+        std::string errorBody = getErrorPageBody(500, config);
+        sendHtmlResponse(500, errorBody, client, fds);
+        return false;
+    }
 
-	// Step 2: Build the full path to the script
-	std::string scriptPath = config.root + path;
+    // Step 2: Build the full path to the script
+    std::string scriptPath = config.root + path;
 
-	// Remove query string from script path if present
-	size_t queryPos = scriptPath.find('?');
-	if (queryPos != std::string::npos) {
-		scriptPath = scriptPath.substr(0, queryPos);
-	}
+    // Remove query string from script path if present
+    size_t queryPos = scriptPath.find('?');
+    if (queryPos != std::string::npos) {
+        scriptPath = scriptPath.substr(0, queryPos);
+    }
 
-	// Step 3: Check if the script file exists
-	if (!fileExists(scriptPath)) {
-		std::cerr << "❌ Script file not found: " << scriptPath << std::endl;
-		std::string errorBody = getErrorPageBody(404, config);
-		sendHtmlResponse(404, errorBody, client, fds);
-		return false;
-	}
+    // Step 3: Check if the script file exists
+    if (!fileExists(scriptPath)) {
+        std::cerr << "❌ Script file not found: " << scriptPath << std::endl;
+        std::string errorBody = getErrorPageBody(404, config);
+        sendHtmlResponse(404, errorBody, client, fds);
+        return false;
+    }
 
-	if (access(scriptPath.c_str(), X_OK) != 0) {
-		std::cerr << "⚠️ Script may not be executable, but continuing..." << std::endl;
-	}
 
-	// Step 4: Execute the script and capture output
-	if (!setUpCgi(client, fds, interpreter, scriptPath, req)) {
-		std::cerr << "❌ Failed to set up CGI execution for: " << scriptPath << std:: endl;
-		std::string errorBody = getErrorPageBody(500, config);
-		client->setPendingResponse(errorBody);
-		for (size_t j = 0; j < fds.size(); ++j) {
-			if (fds[j].fd == client->getFd())
-				fds[j].events |= POLLOUT;
-		}
-		return false;
-	}
+    if (access(scriptPath.c_str(), X_OK) != 0) {
+        std::cerr << "⚠️ Script may not be executable, but continuing..." << std::endl;
+    }
 
-	return true;
+    // Step 4: Execute the script and capture output
+    if (!setUpCgi(client, fds, interpreter, scriptPath, req)) {
+        std::cerr << "❌ Failed to set up CGI execution for: " << scriptPath << std::endl;
+        std::string errorBody = getErrorPageBody(500, config);
+        client->setPendingResponse(errorBody);
+        for (size_t j = 0; j < fds.size(); ++j) {
+            if (fds[j].fd == client->getFd())
+                fds[j].events |= POLLOUT;
+        }
+        return false;
+    }
+
+    return true;
 }
 
 bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
@@ -171,7 +172,7 @@ bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
 
         struct pollfd outPoll = {outputPipe[0], POLLIN, 0};
         fds.push_back(outPoll);
-		
+
 		//only write to CGI input for POST
 		if (req.getMethod() == "POST") {
 			client->setCgiInputBuffer(req.getBody());
@@ -196,14 +197,12 @@ bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
 std::string formatCGIResponse(const std::string& scriptOutput) {
 	if (scriptOutput.empty()) {
 		return "HTTP/1.1 500 Internal Server Error\r\n"
-               "Content-Type: text/html\r\n"
-               "Content-Length: 49\r\n"
-               "Connection: close\r\n"
-               "\r\n"
-               "<html><body><h1>500 Internal Server Error</h1></body></html>";
+			"Content-Type: text/html\r\n"
+			"Content-Length: 49\r\n"
+			"Connection: close\r\n"
+			"\r\n"
+			"<html><body><h1>500 Internal Server Error</h1></body></html>";
 	}
-
-//	std::cout << "📋 Formatting CGI response (" << scriptOutput.size() << " bytes)" << std::endl;
 
 	// Check if the script already included HTTP headers
 	size_t headerEnd = scriptOutput.find("\r\n\r\n");
@@ -214,13 +213,24 @@ std::string formatCGIResponse(const std::string& scriptOutput) {
 			// Extract status code from "Status: 418 I'm a teapot"
 			size_t statusStart = statusPos + 7; // "Status:" length
 			size_t statusEnd = scriptOutput.find("\r\n", statusStart);
+
+			// If \r\n not found, try just \n
+			if (statusEnd == std::string::npos) {
+				statusEnd = scriptOutput.find("\n", statusStart);
+			}
+
 			if (statusEnd != std::string::npos) {
 				std::string statusLine = scriptOutput.substr(statusStart, statusEnd - statusStart);
+
+				statusLine = trim(statusLine);
+
 				// Remove the Status: line from output and add proper HTTP status
 				std::string cleanedOutput = scriptOutput;
 				cleanedOutput.erase(statusPos, statusEnd - statusPos + 2); // +2 for \r\n
 
-				return "HTTP/1.1 " + statusLine + "\r\n" + cleanedOutput;
+				std::string finalResponse = "HTTP/1.1 " + statusLine + "\r\n" + cleanedOutput;
+
+				return finalResponse;
 			}
 		}
 

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   initSocket.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 20:48:37 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 18:47:51 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,7 +63,7 @@ void handleCgiPipeFd(int fd, short revents, std::vector<pollfd>& fds, std::map<i
 			std::cerr << "⚠️ Orphaned CGI pipe error/hangup on fd: " << fd << std::endl;
 			removePollFd(fds, fd);
 			return;
-		
+
 		}
 		//only remove CGI pipe if it's marked done and we are not waiting on it anymore
 		if (fd == client->getCgiInputFd()) {
@@ -87,9 +87,9 @@ and pollfd vector.
 -if POLLOUT is set and client wants to write, we send the buffered data
 */
 void runEventLoop(std::vector<struct pollfd>& fds,
-                  std::map<int, ServerSocket*>& fdToSocket,
-                  std::map<int, ClientConnection*>& clients,
-                  std::map<int, ServerSocket*>& clientToServer) 
+				std::map<int, ServerSocket*>& fdToSocket,
+				std::map<int, ClientConnection*>& clients,
+				std::map<int, ServerSocket*>& clientToServer)
 {
 	while (g_signal != 0) {
 		int ready = poll(&fds[0], fds.size(), -1);
@@ -115,8 +115,47 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				handleCgiPipeFd(fd, revents, fds, clients);
 				++i; continue;
 			}
+			// ✅ UPDATED: Simplified crash detection that doesn't interfere with timeout
+			if (client->isCgiRunning()) {
+				int status;
+				pid_t result = waitpid(client->getCgiPid(), &status, WNOHANG);
+				if (result > 0 && WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+					// Only handle immediate crashes, let timeout handle hanging processes
+					std::cout << "💥 CGI script crashed immediately with code: " << WEXITSTATUS(status) << std::endl;
 
-			checkCgiTimeout(client, fds);
+					// Clean up pipes
+					if (client->getCgiOutputFd() != -1) {
+						close(client->getCgiOutputFd());
+						removePollFd(fds, client->getCgiOutputFd());
+					}
+					if (client->getCgiInputFd() != -1) {
+						close(client->getCgiInputFd());
+						removePollFd(fds, client->getCgiInputFd());
+					}
+
+					// Serve configured 500 error page
+					const ServerConfig& config = clientToServer[client->getFd()]->getConfig();
+					std::string errorBody = getErrorPageBody(500, config);
+					std::string errorResponse = Response::build(500, errorBody, "text/html");
+
+					client->setPendingResponse(errorResponse);
+					client->setCgiFds(-1, -1);
+					client->markCgiDone();
+
+					for (size_t j = 0; j < fds.size(); ++j)
+						if (fds[j].fd == client->getFd())
+							fds[j].events |= POLLOUT;
+
+					++i;
+					continue;
+				}
+			}
+
+			if (checkCgiTimeout(client, fds)) {
+				std::cout << "⚡ CGI timeout handled, continuing to next client" << std::endl;
+				++i;
+				continue;
+			}
 
 			// === CGI STDOUT ===
 			if ((revents & POLLIN) && fd == client->getCgiOutputFd()) {
@@ -191,10 +230,12 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 
 			// === Client POLLOUT (static or chunked) ===
 			if ((revents & POLLOUT) && fd == client->getFd() && client->wantsToWrite()) {
+				std::cout << "📤 POLLOUT: Sending response to fd " << fd << std::endl;
+				std::cout << "📏 Response size: " << client->getPendingSendBuffer().size() << " bytes" << std::endl;
 				std::string& buf = client->getPendingSendBuffer();
 				size_t& sent = client->getBytesSentSoFar();
 				ssize_t n = send(fd, buf.c_str() + sent, buf.size() - sent, 0);
-										
+
 				if (n <= 0) {
 					//std::cerr << "❌ Send failed on client fd " << fd << "\n";
 					client->setChunkState(ERROR);
@@ -207,6 +248,12 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				if (sent == buf.size()) {
 					client->clearSendState();
 
+					// ✅ If this was a CGI response, close the connection
+					if (client->isCgiDone()) {
+						std::cout << "✅ CGI response fully sent, closing connection fd " << fd << std::endl;
+						handleClientCleanup(fd, fds, clients, i);
+						continue;
+					}
 					if (client->isChunkedDone()) {
 						std::cerr << "✅ Final chunk sent to client fd " << fd << "\n";
 						handleClientCleanup(fd, fds, clients, i);
@@ -243,32 +290,83 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 
 
 
-void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
+bool checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
 	if (!client->isCgiRunning())
-		return;
-	time_t now = time(NULL);
-	if (now - client->getCgiStartTime() > 10) {
-		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << ", killing 🔪🩸😵\n\n";
-		kill(client->getCgiPid(), SIGKILL);
-		
-		//reap the child process to prevent zombies
-		int status;
-		waitpid(client->getCgiPid(), &status, WNOHANG);
+		return false;
 
-		//close pipe FDs
+	time_t now = time(NULL);
+	time_t elapsed = now - client->getCgiStartTime();
+
+	if (elapsed > 10) {
+		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << " after " << elapsed << " seconds" << std::endl;
+
+		// ✅ Force kill the CGI process
+		kill(client->getCgiPid(), SIGKILL);
+
+		// ✅ Give it a moment to die, then reap it
+		usleep(100000); // 100ms
+		int status;
+		pid_t result = waitpid(client->getCgiPid(), &status, WNOHANG);
+		if (result <= 0) {
+			// Still not dead, wait a bit more
+			usleep(500000); // 500ms
+			waitpid(client->getCgiPid(), &status, WNOHANG);
+		}
+
+		std::cout << "💀 CGI process killed and reaped" << std::endl;
+
+		// ✅ Close pipe FDs and remove from poll
 		if (client->getCgiOutputFd() != -1) {
+			std::cout << "🔧 Closing CGI output fd " << client->getCgiOutputFd() << std::endl;
 			close(client->getCgiOutputFd());
 			removePollFd(fds, client->getCgiOutputFd());
 		}
 		if (client->getCgiInputFd() != -1) {
+			std::cout << "🔧 Closing CGI input fd " << client->getCgiInputFd() << std::endl;
 			close(client->getCgiInputFd());
 			removePollFd(fds, client->getCgiInputFd());
 		}
-		
-		//set both FDs ot -11 BEFORE markCgiDone
+
+		// ✅ Clear CGI state BEFORE setting response
 		client->setCgiFds(-1, -1);
 		client->markCgiDone();
-	}
+
+		// ✅ Generate timeout error response
+		std::cout << "📤 Generating 504 timeout response" << std::endl;
+
+		std::string timeoutResponse = "HTTP/1.1 504 Gateway Timeout\r\n"
+									"Content-Type: text/html; charset=utf-8\r\n"
+									"Content-Length: 150\r\n"
+									"Connection: close\r\n"
+									"\r\n"
+									"<html><body>"
+									"<h1>504 Gateway Timeout</h1>"
+									"<p>The CGI script took too long to respond and was terminated.</p>"
+									"<p><a href='/'>Go Home</a></p>"
+									"</body></html>";
+
+		client->setPendingResponse(timeoutResponse);
+
+		// ✅ Force mark client for POLLOUT to send response
+		bool foundClient = false;
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == client->getFd()) {
+				fds[j].events |= POLLOUT;
+				foundClient = true;
+				std::cout << "✅ Marked client fd " << client->getFd() << " for POLLOUT" << std::endl;
+				break;
+			}
+		}
+
+		if (!foundClient) {
+			std::cerr << "❌ Could not find client fd " << client->getFd() << " in poll fds!" << std::endl;
+		}
+
+		std::cout << "✅ Timeout handling complete" << std::endl;
+        return true;  // ✅ Indicate timeout was handled
+    }
+
+    return false;  // ✅ No timeout
 }
 
 bool	methodAllowed(const std::string& method, const std::vector<std::string>& allowed) {
@@ -280,96 +378,96 @@ bool	methodAllowed(const std::string& method, const std::vector<std::string>& al
 }
 
 void processClientRequest(int fd,
-                std::vector<struct pollfd>& fds,
-                std::map<int, ClientConnection*>& clients,
-                std::map<int, ServerSocket*>& clientToServer) {
-        			
-    ClientConnection* client = clients[fd];
-    std::string raw = client->getRawRequest();
+				std::vector<struct pollfd>& fds,
+				std::map<int, ClientConnection*>& clients,
+				std::map<int, ServerSocket*>& clientToServer) {
 
-    Request req(raw);
-    if (req.getMethod().empty() || req.getPath().empty()) {
-        std::string body = "<h1>400 Bad Request</h1>";
-        std::string response = Response::build(400, body, "text/html");
-        client->setPendingResponse(response);
-        for (size_t j = 0; j < fds.size(); ++j) {
-            if (fds[j].fd == client->getFd())
-                fds[j].events |= POLLOUT;
-        }
-           return;
-    }
-    std::string method = req.getMethod();
-    std::string path = req.getPath();
+	ClientConnection* client = clients[fd];
+	std::string raw = client->getRawRequest();
 
-    const ServerConfig& config = clientToServer[fd]->getConfig();
-    LocationConfig location = matchLocation(path, config);
+	Request req(raw);
+	if (req.getMethod().empty() || req.getPath().empty()) {
+		std::string body = "<h1>400 Bad Request</h1>";
+		std::string response = Response::build(400, body, "text/html");
+		client->setPendingResponse(response);
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == client->getFd())
+				fds[j].events |= POLLOUT;
+		}
+		return;
+	}
+	std::string method = req.getMethod();
+	std::string path = req.getPath();
 
-    // Check if method is allowed
-    if (!methodAllowed(method, location.methods)) {
-        std::string body = getErrorPageBody(405, config);
-        std::string response = Response::build(405, body, "text/html");
-        client->setPendingResponse(response);
-        for (size_t j = 0; j < fds.size(); ++j) {
-            if (fds[j].fd == fd) {
-                fds[j].events |= POLLOUT;
-            }
-        }
-        return;
-    }
+	const ServerConfig& config = clientToServer[fd]->getConfig();
+	LocationConfig location = matchLocation(path, config);
 
-    // Check redirect
-    if (!location.redirect.empty()) {
-        int statusCode = 302;
-        if (location.returnStatusCode >= 300 && location.returnStatusCode < 400)
-            statusCode = location.returnStatusCode;
+	// Check if method is allowed
+	if (!methodAllowed(method, location.methods)) {
+		std::string body = getErrorPageBody(405, config);
+		std::string response = Response::build(405, body, "text/html");
+		client->setPendingResponse(response);
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == fd) {
+				fds[j].events |= POLLOUT;
+			}
+		}
+		return;
+	}
 
-        std::ostringstream response;
-        response << "HTTP/1.1 " << statusCode << " " << HttpStatus::getStatusMessages(statusCode) << "\r\n";
-        response << "Location: " << location.redirect << "\r\n";
-        response << "Connection: close\r\n";
-        response << "\r\n";
-        client->setPendingResponse(response.str());
-        for (size_t j = 0; j < fds.size(); ++j) {
-            if (fds[j].fd == fd) {
-                fds[j].events |= POLLOUT;
-            }
-        }
-        return;
-    }
+	// Check redirect
+	if (!location.redirect.empty()) {
+		int statusCode = 302;
+		if (location.returnStatusCode >= 300 && location.returnStatusCode < 400)
+			statusCode = location.returnStatusCode;
 
-    // Route to correct handler
-    if (method == "GET") {
-        handleGet(client, fds, req, path, location, config);
-    } else if (method == "POST") {
-        handlePost(client, fds, req, path, location, config);
-    } else if (method == "DELETE") {
-        handleDelete(path, location, config, client, fds);
-	//} else if (method == "HEAD") {
-		//handleHead(fd, path, location, client, fds);
-    } else {
-        std::string body = getErrorPageBody(501, config);
-        std::string response = Response::build(501, body, "text/html");
-        client->setPendingResponse(response);
-        for (size_t j = 0; j < fds.size(); ++j) {
-            if (fds[j].fd == fd) {
-                fds[j].events |= POLLOUT;
-            }
-        }
-    }
+		std::ostringstream response;
+		response << "HTTP/1.1 " << statusCode << " " << HttpStatus::getStatusMessages(statusCode) << "\r\n";
+		response << "Location: " << location.redirect << "\r\n";
+		response << "Connection: close\r\n";
+		response << "\r\n";
+		client->setPendingResponse(response.str());
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == fd) {
+				fds[j].events |= POLLOUT;
+			}
+		}
+		return;
+	}
+
+	// Route to correct handler
+	if (method == "GET") {
+		handleGet(client, fds, req, path, location, config);
+	} else if (method == "POST") {
+		handlePost(client, fds, req, path, location, config);
+	} else if (method == "DELETE") {
+		handleDelete(path, location, config, client, fds);
+	} else if (method == "PUT") {
+		handlePut(req, path, location, config, client, fds);
+	} else {
+		std::string body = getErrorPageBody(501, config);
+		std::string response = Response::build(501, body, "text/html");
+		client->setPendingResponse(response);
+		for (size_t j = 0; j < fds.size(); ++j) {
+			if (fds[j].fd == fd) {
+				fds[j].events |= POLLOUT;
+			}
+		}
+	}
 }
 
 /*
 Accepts a new client connection, creates a new ClientConnection object to manage communication,
 sets up a pollfd struct for the client, and adds it to the poll list.
 */
-void	handleNewClient(ServerSocket* server, std::vector<pollfd> &fds, 
+void	handleNewClient(ServerSocket* server, std::vector<pollfd> &fds,
 			std::map<int, ClientConnection*>& clients, std::map<int, ServerSocket*>& clientToServer) {
 
 	int	client_fd = server->acceptClient();
 	if (client_fd == -1) {
 		return;
 	}
-	
+
 	ClientConnection* client = new ClientConnection(client_fd);
 	pollfd client_pfd;
 	client_pfd.fd = client_fd;

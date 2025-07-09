@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   helperFunction.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 20:48:01 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 17:34:24 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -135,7 +135,7 @@ void debugImageServing(const std::string& path, const std::string& fullPath) {
 
 void serveStaticFile(std::string path, const ServerConfig &config,
 	ClientConnection* client, std::vector<struct pollfd>& fds) {
-		
+
 	// Check if the path is empty or just a slash, then use the index file
 	if (path.empty() || path == "/")
 		path = "/" + config.index;
@@ -148,7 +148,7 @@ void serveStaticFile(std::string path, const ServerConfig &config,
 		sendHtmlResponse(403, errorBody, client, fds);
 		return;
 	}
-	
+
 	if (fullPath.empty()) {
 		return;
 	}
@@ -188,12 +188,12 @@ void serveStaticFile(std::string path, const ServerConfig &config,
         sendHtmlResponse(404, errorBody, client, fds);
 		return;
 	}
-	
+
 	std::string body((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 	file.close();
 	std::string response = Response::build(200, body, contentType);
     client->setPendingResponse(response);
-	
+
 	// Set POLLOUT to send headers first
     for (size_t j = 0; j < fds.size(); ++j) {
         if (fds[j].fd == client->getFd())
@@ -310,14 +310,14 @@ void handleClientCleanup(int fd, std::vector<pollfd>& fds,
         std::cerr << "⚠️  Skipping cleanup: fd " << fd << " has no ClientConnection\n";
         return;
     }
-	
+
 	ClientConnection* client = clients[fd];
-	
+
 	// Track CGI fds before erasing client
 	int cgiInputFd = client->getCgiInputFd();
 
 	// Safely close CGI FDs
-    if (client->getCgiInputFd() != -1) 
+    if (client->getCgiInputFd() != -1)
 		close(client->getCgiInputFd());
     if (client->getCgiOutputFd() != -1)
 		close(client->getCgiOutputFd());
@@ -326,7 +326,7 @@ void handleClientCleanup(int fd, std::vector<pollfd>& fds,
 	return;
 	}
 	int cgiOutputFd = client->getCgiOutputFd();
-	
+
 	delete client;
 	clients.erase(fd);
 	close(fd);
@@ -501,7 +501,7 @@ bool sendFileChunked(int fd, const std::string& fullPath, const std::string& con
 
 		totalBytesSent += bytesRead;
 	}
-	
+
 	file.close();
 
 	// Send final chunk (size 0) to indicate end

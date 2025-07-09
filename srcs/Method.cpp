@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Method.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/08 20:44:23 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 16:57:00 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,9 +29,9 @@ std::string getFileExtension(const std::string& filename) {
 	return filename.substr(dot);
 }
 
-bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const Request& req, 
+bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const Request& req,
 	const std::string& path, const LocationConfig& location, const ServerConfig& config) {
-	
+
 	if (path == "/appspecific/com.chrome.devtools.json" || path == "/.well-known/appspecific/com.chrome.devtools.json") {
 		//ignore the request
 		std::string response = "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n";;
@@ -43,14 +43,10 @@ bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 		return true;
 	}
 	std::cout << "📥 Handling GET request for " << path << std::endl;
-	
+
 	// First: Check if this is a CGI request FIRST (highest priority)
 	if (path.find("/cgi-bin/") == 0) {
-		std::string fullPath;
-		if (path.find("/cgi-bin/") == 0)
-    		fullPath = "www" + path; // or config.root + path if config.root == "www"
-		else
-    		fullPath = location.root + path;
+			std::string fullPath = config.root + path;
 
 		if (!fileExists(fullPath)) {
 			std::cout << "❌ CGI file not found: " << fullPath << std::endl;
@@ -74,7 +70,7 @@ bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 		}
 		return true;
 	}
-	
+
 	// NEW: Handle API endpoint for listing uploaded files
 	if (path == "/api/photos" || path == "/api/files") {
 		std::string uploadDir = location.upload_path.empty() ? "www/upload" : location.upload_path;
@@ -95,7 +91,7 @@ bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const 
    		effectivePath = "/" + config.index; // config.index should be "index.html"
 	// Check if path is a directory and autoindex is enabled
 	std::string fullPath = location.root + effectivePath;
-	
+
 	if (fileExists(fullPath)) {
    		serveStaticFile(effectivePath, config, client, fds);
    		return true;
@@ -160,6 +156,7 @@ bool handlePost(ClientConnection* client, std::vector<struct pollfd>& fds, const
 		if (!handleSimpleCGI(client, fds, req, path, config)){
 			return false;
 		}
+		return true;
 	}
 
 	// Default POST handling

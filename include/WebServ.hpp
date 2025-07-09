@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   WebServ.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: keramos- <keramos-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/15 17:27:43 by keramos-          #+#    #+#             */
-/*   Updated: 2025/07/08 20:20:43 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 18:41:17 by keramos-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -164,9 +164,9 @@ bool		setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 				const Request& req);
 void 		processClientRequest(int fd, std::vector<struct pollfd>& fds, std::map<int, ClientConnection*>& clients,
 				std::map<int, ServerSocket*>& clientToServer);
-void		checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds);
+bool		checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds);
 std::string getFileExtension(const std::string& filename);
 bool 		hasCGIExtension(const std::string& path, const ServerConfig& config);
 bool 		sendNextChunk(ClientConnection* client);
-				
+
 #endif // WEBSERV_HPP

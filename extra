@@ -1,0 +1,15 @@
+if ((revents & POLLOUT) && fd == client->getFd() && client->wantsToWrite()) {
+    std::cout << "📤 POLLOUT: Sending response to fd " << fd << std::endl;
+    std::cout << "📏 Response size: " << client->getPendingSendBuffer().size() << " bytes" << std::endl;
+
+    std::string& buf = client->getPendingSendBuffer();
+    size_t& sent = client->getBytesSentSoFar();
+    ssize_t n = send(fd, buf.c_str() + sent, buf.size() - sent, 0);
+
+    // ... rest of POLLOUT handling
+}// ✅ ADD THIS:
+if (client->isCgiDone() && client->wantsToWrite()) {
+    std::cout << "⚡ Timeout response ready, skipping to POLLOUT handling" << std::endl;
+    ++i;
+    continue;
+}
