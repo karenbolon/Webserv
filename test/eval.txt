@@ -1,5 +1,4 @@
-download siege
-
+DOWNLOAD SIEGE:
 
 cd /tmp
 curl -O https://download.joedog.org/siege/siege-4.1.7.tar.gz
@@ -15,7 +14,7 @@ export PATH="$HOME/.local/bin:$PATH"
 #get webserv started and then type to make sure it works:
 curl -i http://localhost:8081/empty.html
 
-To stress test: 
+TO STRESS TEST:
 siege -c 25 -t 30S -b http://localhost:8081/empty.html
 
 wait until the end to see if we are 95% or higher per the eval
