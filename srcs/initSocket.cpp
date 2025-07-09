@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/09 16:46:49 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 18:16:52 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,7 +92,8 @@ void runEventLoop(std::vector<struct pollfd>& fds,
                   std::map<int, ServerSocket*>& clientToServer) 
 {
 	while (g_signal != 0) {
-		int ready = poll(&fds[0], fds.size(), -1);
+		//int ready = poll(&fds[0], fds.size(), -1);
+		int ready = poll(&fds[0], fds.size(), 100); //100 ms 
 		if (ready < 0) {
 			if (errno == EINTR) continue;
 			std::cerr << "❌ Poll() error\n";
@@ -103,28 +104,83 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 			int fd = fds[i].fd;
 			short revents = fds[i].revents;
 
-			if (revents == 0) { ++i; continue; }
+			if (revents == 0) { 
+				++i; 
+				continue; 
+			}
 
 			if (fdToSocket.count(fd)) {
 				handleNewClient(fdToSocket[fd], fds, clients, clientToServer);
-				++i; continue;
+				++i; 
+				continue;
 			}
 
 			ClientConnection* client = findClientByFd(clients, fd);
 			if (!client) {
 				handleCgiPipeFd(fd, revents, fds, clients);
-				++i; continue;
+				++i; 
+				continue;
 			}
+			//Check for CGI script crashes BEFORE timeout check
+			if (client->isCgiRunning()) {
+				int status;
+				pid_t result = waitpid(client->getCgiPid(), &status, WNOHANG);
+				if (result > 0) {
+					// CGI process has exited
+					if (WIFEXITED(status)) {
+						int exit_code = WEXITSTATUS(status);
+						std::cout << "🔍 CGI process exited with code: " << exit_code << std::endl;
 
+						if (exit_code != 0) {
+							// ✅ CGI script crashed - serve configured 500 error page
+							std::cout << "💥 CGI script crashed, serving 500 error page" << std::endl;
+
+							// Clean up CGI pipes
+							if (client->getCgiOutputFd() != -1) {
+								close(client->getCgiOutputFd());
+								removePollFd(fds, client->getCgiOutputFd());
+							}
+							if (client->getCgiInputFd() != -1) {
+								close(client->getCgiInputFd());
+								removePollFd(fds, client->getCgiInputFd());
+							}
+
+							// ✅ Use clientToServer to get config and serve error page
+							const ServerConfig& config = clientToServer[client->getFd()]->getConfig();
+							std::string errorBody = getErrorPageBody(500, config);
+							std::string errorResponse = Response::build(500, errorBody, "text/html");
+
+							client->setPendingResponse(errorResponse);
+							client->setCgiFds(-1, -1);
+							client->markCgiDone();
+
+							// Mark for sending
+							for (size_t j = 0; j < fds.size(); ++j)
+								if (fds[j].fd == client->getFd())
+									fds[j].events |= POLLOUT;
+
+							++i;
+							continue;
+						}
+						// If exit_code == 0, script finished normally, let it continue processing output
+					}
+				}
+			}
 			checkCgiTimeout(client, fds, clientToServer);
 
 			// === CGI STDOUT ===
 			if ((revents & POLLIN) && fd == client->getCgiOutputFd()) {
 				char buf[4096];
 				ssize_t n = read(fd, buf, sizeof(buf));
-				if (n > 0) {
+				if (n > 0)
 					client->appendToCgiOutput(buf, n);
-				} else {
+				
+				if (n <= 0) {
+					if (n == 0) {
+						std::cerr << "📭 CGI stdout EOF on fd " << fd << "\n";
+					} else {
+						std::cerr << "⚠️ CGI stdout read failed on fd " << fd << "\n";
+					}
 					//std::cerr << "📭 CGI stdout EOF, closing fd " << fd << "\n";
 					removePollFd(fds, fd);
 					close(fd);
@@ -142,7 +198,8 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 								fds[j].events |= POLLOUT;
 					}
 				}
-				--i; continue;
+				--i; 
+				continue;
 			}
 
 			// === CGI STDIN ===
@@ -155,7 +212,8 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					client->setCgiFds(-1, client->getCgiOutputFd());
 					if (client->getCgiOutputFd() == -1)
 						client->markCgiDone();
-					++i; continue;
+					++i; 
+					continue;
 				}
 				if (body.empty()) {
 					shutdown(fd, SHUT_WR);
@@ -163,7 +221,8 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					client->setCgiFds(-1, client->getCgiOutputFd());
 					if (client->getCgiOutputFd() == -1)
 						client->markCgiDone();
-					++i; continue;
+					++i; 
+					continue;
 				}
 				ssize_t sent = write(fd, body.c_str(), body.size());
 				if (sent <= 0) {
@@ -173,7 +232,8 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					client->setCgiFds(-1, client->getCgiOutputFd());
 					if (client->getCgiOutputFd() == -1)
 						client->markCgiDone();
-					--i; continue;
+					--i; 
+					continue;
 				}
 				client->consumeCgiInput(sent);
 				if (client->cgiInputBufferEmpty()) {
@@ -183,19 +243,26 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					if (client->getCgiOutputFd() == -1)
 						client->markCgiDone();
 				}
-				++i; continue;
+				++i; 
+				continue;
 			}
 
 			// === Client POLLIN ===
 			if ((revents & POLLIN) && fd == client->getFd()) {
 				int recvResult = client->recvFullRequest(fd, clientToServer[fd]->getConfig(), client, fds);
 				if (recvResult <= 0) {
+					if (recvResult == 0) {
+						std::cerr << "❌ Client disconnected on fd " << fd << "\n";
+					} else {
+						std::cerr << "❌ Receive failed on client fd " << fd << "\n";
+					}
 					handleClientCleanup(fd, fds, clients, i);
 					continue;
 				}
 				if (client->isRequestComplete())
 					processClientRequest(fd, fds, clients, clientToServer);
-				++i; continue;
+				++i; 
+				continue;
 			}
 
 			// === Client POLLOUT (static or chunked) ===
@@ -205,6 +272,11 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				ssize_t n = send(fd, buf.c_str() + sent, buf.size() - sent, 0);
 										
 				if (n <= 0) {
+					if (n == 0) {
+						std::cerr << "❌ Client disconnected on fd " << fd << "\n";
+					} else {
+						std::cerr << "❌ Send failed on client fd " << fd << "\n";
+					}
 					//std::cerr << "❌ Send failed on client fd " << fd << "\n";
 					client->setChunkState(ERROR);
 					client->clearSendState();
@@ -215,6 +287,12 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				sent += n;
 				if (sent == buf.size()) {
 					client->clearSendState();
+					if (client->getChunkState() == IDLE && client->getChunkFilePath().empty()
+    					&& client->getCgiPid() == -1 && client->isCgiDone()) {
+						// response was from CGI and error is sent — cleanup
+						handleClientCleanup(fd, fds, clients, i);
+						continue;
+					}
 
 					if (client->isChunkedDone()) {
 						std::cerr << "✅ Final chunk sent to client fd " << fd << "\n";
@@ -255,9 +333,11 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& clientToServer) {
 	if (!client->isCgiRunning())
 		return;
+	
 	time_t now = time(NULL);
 	if (now - client->getCgiStartTime() > 10) {
 		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << ", killing 🔪🩸😵\n\n";
+		
 		std::string partial = client->getCgiOutputBuffer().substr(0, 200);
 		if (!partial.empty())
        		std::cerr << "📝 Partial CGI output: " << partial << std::endl;
@@ -282,14 +362,18 @@ void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds, 
 		client->markCgiDone();
 		
 		//Send 500 response!
-		std::string body = getErrorPageBody(500, clientToServer[client->getFd()]->getConfig());
+		const ServerConfig& config = clientToServer[client->getFd()]->getConfig();
+		std::string body = getErrorPageBody(500, config);
 		std::string response = Response::build(500, body, "text/html");
 		client->setPendingResponse(response);
 		
 		//Ensure it gets sent
-		for (size_t i = 0; i < fds.size(); ++i)
-			if (fds[i].fd == client->getFd())
+		for (size_t i = 0; i < fds.size(); ++i) {
+			if (fds[i].fd == client->getFd()) {
 				fds[i].events |= POLLOUT;
+				break;
+			}
+		}
 	}
 }
 
