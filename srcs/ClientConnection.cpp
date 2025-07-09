@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 20:54:04 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 19:02:45 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,7 +83,7 @@ int ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config,
 			//bc some transfers are huge, it doesn't always mean an error, the browser
 			//could cut the connection early and the transfer will resume later
 			if (this->getChunkState() == IN_PROGRESS) {
-				std::cerr << "⚠️ Client disconnected during chunked transfer (not server error)\n";
+				std::cerr << "💔 Client disconnected during chunked transfer (not server error)\n";
 				this->setChunkState(ERROR);
 				return bytes;
 			}
@@ -246,4 +246,19 @@ bool ClientConnection::isChunkedError() const {
 
 void ClientConnection::resetChunkedFlags() {
     _chunkedState = IDLE;
+}
+
+/*void ClientConnection::closeCgiFds() {
+	if (_cgiInputFd != -1) {
+		close(_cgiInputFd);
+		_cgiInputFd = -1;
+	}
+	if (_cgiOutputFd != -1) {
+		close(_cgiOutputFd);
+		_cgiOutputFd = -1;
+	}
+}*/
+
+void ClientConnection::setCgiRunning(bool val) {
+	_cgiRunning = val;
 }
