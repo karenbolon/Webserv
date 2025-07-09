@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Method.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/08 20:44:23 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 16:58:43 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -160,6 +160,7 @@ bool handlePost(ClientConnection* client, std::vector<struct pollfd>& fds, const
 		if (!handleSimpleCGI(client, fds, req, path, config)){
 			return false;
 		}
+		return true;
 	}
 
 	// Default POST handling

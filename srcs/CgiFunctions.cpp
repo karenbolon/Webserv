@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiFunctions.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 20:59:35 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 17:09:27 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,116 +91,115 @@ bool handleSimpleCGI(ClientConnection* client, std::vector<struct pollfd>& fds, 
 }
 
 bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
-              const std::string& interpreter, const std::string& scriptPath,
-              const Request& req) {
+			  const std::string& interpreter, const std::string& scriptPath,
+			  const Request& req) {
 
-    int outputPipe[2];
-    int inputPipe[2];
+	int outputPipe[2];
+	int inputPipe[2];
 
-    if (pipe(outputPipe) == -1 || pipe(inputPipe) == -1) {
-        std::cerr << "❌ Failed to create pipes" << std::endl;
-        return false;
-    }
+	if (pipe(outputPipe) == -1 || pipe(inputPipe) == -1) {
+		std::cerr << "❌ Failed to create pipes" << std::endl;
+		return false;
+	}
 
-    pid_t pid = fork();
-    if (pid < 0) {
-        std::cerr << "❌ Fork failed" << std::endl;
-        close(outputPipe[0]); close(outputPipe[1]);
-        close(inputPipe[0]); close(inputPipe[1]);
-        return false;
-    }
+	pid_t pid = fork();
+	if (pid < 0) {
+		std::cerr << "❌ Fork failed" << std::endl;
+		close(outputPipe[0]); close(outputPipe[1]);
+		close(inputPipe[0]); close(inputPipe[1]);
+		return false;
+	}
 
-    if (pid == 0) {
-        // Child process
+	if (pid == 0) {
+		// Child process
 
-        dup2(inputPipe[0], STDIN_FILENO);
-        dup2(outputPipe[1], STDOUT_FILENO);
+		dup2(inputPipe[0], STDIN_FILENO);
+		dup2(outputPipe[1], STDOUT_FILENO);
 
-        close(outputPipe[0]); close(outputPipe[1]);
-        close(inputPipe[0]); close(inputPipe[1]);
+		close(outputPipe[0]); close(outputPipe[1]);
+		close(inputPipe[0]); close(inputPipe[1]);
 
-        std::vector<std::string> envStrings;
-        envStrings.push_back("REQUEST_METHOD=" + req.getMethod());
-        envStrings.push_back("QUERY_STRING=" + req.getQuery());
-        envStrings.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
-        envStrings.push_back("CONTENT_LENGTH=" + intToStr(req.getBody().length()));
-        envStrings.push_back("GATEWAY_INTERFACE=CGI/1.1");
-        envStrings.push_back("SERVER_PROTOCOL=HTTP/1.1");
-        envStrings.push_back("SCRIPT_NAME=" + scriptPath);
-        if (scriptPath.find(".php") != std::string::npos) {
-            envStrings.push_back("SCRIPT_FILENAME=" + scriptPath);
-            envStrings.push_back("REDIRECT_STATUS=200");
-        }
+		std::vector<std::string> envStrings;
+		envStrings.push_back("REQUEST_METHOD=" + req.getMethod());
+		envStrings.push_back("QUERY_STRING=" + req.getQuery());
+		envStrings.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
+		envStrings.push_back("CONTENT_LENGTH=" + intToStr(req.getBody().length()));
+		envStrings.push_back("GATEWAY_INTERFACE=CGI/1.1");
+		envStrings.push_back("SERVER_PROTOCOL=HTTP/1.1");
+		envStrings.push_back("SCRIPT_NAME=" + scriptPath);
+		if (scriptPath.find(".php") != std::string::npos) {
+			envStrings.push_back("SCRIPT_FILENAME=" + scriptPath);
+			envStrings.push_back("REDIRECT_STATUS=200");
+		}
 
-        const std::map<std::string, std::string>& headers = req.getHeaders();
-        for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
-            std::string httpVar = "HTTP_";
-            for (size_t i = 0; i < it->first.length(); ++i) {
-                char c = it->first[i];
-                httpVar += (c == '-') ? '_' : std::toupper(static_cast<unsigned char>(c));
-            }
-            envStrings.push_back(httpVar + "=" + it->second);
-        }
+		const std::map<std::string, std::string>& headers = req.getHeaders();
+		for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it) {
+			std::string httpVar = "HTTP_";
+			for (size_t i = 0; i < it->first.length(); ++i) {
+				char c = it->first[i];
+				httpVar += (c == '-') ? '_' : std::toupper(static_cast<unsigned char>(c));
+			}
+			envStrings.push_back(httpVar + "=" + it->second);
+		}
 
-        std::vector<char*> envp;
-        for (size_t i = 0; i < envStrings.size(); ++i) {
-            envp.push_back(const_cast<char*>(envStrings[i].c_str()));
-        }
-        envp.push_back(NULL);
+		std::vector<char*> envp;
+		for (size_t i = 0; i < envStrings.size(); ++i) {
+			envp.push_back(const_cast<char*>(envStrings[i].c_str()));
+		}
+		envp.push_back(NULL);
 
-        char* args[] = {
-            const_cast<char*>(interpreter.c_str()),
-            const_cast<char*>(scriptPath.c_str()),
-            NULL
-        };
+		char* args[] = {
+			const_cast<char*>(interpreter.c_str()),
+			const_cast<char*>(scriptPath.c_str()),
+			NULL
+		};
 
-        execve(interpreter.c_str(), args, &envp[0]);
-        _exit(1);
-    } else {
-        // Parent process
-        close(inputPipe[0]);
-        close(outputPipe[1]);
+		execve(interpreter.c_str(), args, &envp[0]);
+		_exit(1);
+	} else {
+		// Parent process
+		close(inputPipe[0]);
+		close(outputPipe[1]);
 
-        fcntl(inputPipe[1], F_SETFL, O_NONBLOCK);
-        fcntl(outputPipe[0], F_SETFL, O_NONBLOCK);
+		fcntl(inputPipe[1], F_SETFL, O_NONBLOCK);
+		fcntl(outputPipe[0], F_SETFL, O_NONBLOCK);
 
-        client->setCgiFds(inputPipe[1], outputPipe[0]);
-        client->setCgiPid(pid);
-        client->markCgiRunning();
-        client->setCgiStartTime(time(NULL));
+		client->setCgiFds(inputPipe[1], outputPipe[0]);
+		client->setCgiPid(pid);
+		client->markCgiRunning();
+		client->setCgiStartTime(time(NULL));
 
-        struct pollfd outPoll = {outputPipe[0], POLLIN, 0};
-        fds.push_back(outPoll);
+		struct pollfd outPoll = {outputPipe[0], POLLIN, 0};
+		fds.push_back(outPoll);
 		
 		//only write to CGI input for POST
 		if (req.getMethod() == "POST") {
 			client->setCgiInputBuffer(req.getBody());
 			client->setCgiFds(inputPipe[1], outputPipe[0]);
 			struct pollfd inPoll = {inputPipe[1], POLLOUT, 0};
-        	fds.push_back(inPoll);
+			fds.push_back(inPoll);
 		}
 		else {
-			//we won't write anything an d close hte inputPipe[1]
+			//we won't write anything and close the inputPipe[1]
 			//struct pollfd inPoll = {inputPipe[1], POLLOUT, 0};
-        	//fds.push_back(inPoll);
+			//fds.push_back(inPoll);
 			shutdown(inputPipe[1], SHUT_WR); //instead of close() as this causes the FD to close before child is done
 			close(inputPipe[1]);
 			client->setCgiFds(-1, outputPipe[0]);
 		}
-    }
+	}
 	return true;
 }
-
 
 // Helper function to format CGI output as HTTP response
 std::string formatCGIResponse(const std::string& scriptOutput) {
 	if (scriptOutput.empty()) {
 		return "HTTP/1.1 500 Internal Server Error\r\n"
-               "Content-Type: text/html\r\n"
-               "Content-Length: 49\r\n"
-               "Connection: close\r\n"
-               "\r\n"
-               "<html><body><h1>500 Internal Server Error</h1></body></html>";
+			   "Content-Type: text/html\r\n"
+			   "Content-Length: 49\r\n"
+			   "Connection: close\r\n"
+			   "\r\n"
+			   "<html><body><h1>500 Internal Server Error</h1></body></html>";
 	}
 
 //	std::cout << "📋 Formatting CGI response (" << scriptOutput.size() << " bytes)" << std::endl;

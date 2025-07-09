@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   initSocket.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 20:48:37 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/09 16:46:49 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,7 +116,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				++i; continue;
 			}
 
-			checkCgiTimeout(client, fds);
+			checkCgiTimeout(client, fds, clientToServer);
 
 			// === CGI STDOUT ===
 			if ((revents & POLLIN) && fd == client->getCgiOutputFd()) {
@@ -148,6 +148,15 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 			// === CGI STDIN ===
 			if ((revents & POLLOUT) && fd == client->getCgiInputFd()) {
 				std::string& body = client->getCgiInputBuffer();
+				// FIX: Don't write if CGI process is dead
+				if (!client->isCgiRunning()) {
+					shutdown(fd, SHUT_WR);
+					removePollFd(fds, fd);
+					client->setCgiFds(-1, client->getCgiOutputFd());
+					if (client->getCgiOutputFd() == -1)
+						client->markCgiDone();
+					++i; continue;
+				}
 				if (body.empty()) {
 					shutdown(fd, SHUT_WR);
 					removePollFd(fds, fd);
@@ -243,12 +252,15 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 
 
 
-void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
+void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds, std::map<int, ServerSocket*>& clientToServer) {
 	if (!client->isCgiRunning())
 		return;
 	time_t now = time(NULL);
 	if (now - client->getCgiStartTime() > 10) {
 		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << ", killing 🔪🩸😵\n\n";
+		std::string partial = client->getCgiOutputBuffer().substr(0, 200);
+		if (!partial.empty())
+       		std::cerr << "📝 Partial CGI output: " << partial << std::endl;
 		kill(client->getCgiPid(), SIGKILL);
 		
 		//reap the child process to prevent zombies
@@ -268,6 +280,16 @@ void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) 
 		//set both FDs ot -11 BEFORE markCgiDone
 		client->setCgiFds(-1, -1);
 		client->markCgiDone();
+		
+		//Send 500 response!
+		std::string body = getErrorPageBody(500, clientToServer[client->getFd()]->getConfig());
+		std::string response = Response::build(500, body, "text/html");
+		client->setPendingResponse(response);
+		
+		//Ensure it gets sent
+		for (size_t i = 0; i < fds.size(); ++i)
+			if (fds[i].fd == client->getFd())
+				fds[i].events |= POLLOUT;
 	}
 }
 
@@ -344,9 +366,11 @@ void processClientRequest(int fd,
         handlePost(client, fds, req, path, location, config);
     } else if (method == "DELETE") {
         handleDelete(path, location, config, client, fds);
-	//} else if (method == "HEAD") {
-		//handleHead(fd, path, location, client, fds);
-    } else {
+	} else if (method == "HEAD") {
+		handleHead(fd, path, location, client, fds);
+	} else if (method == "PUT") {
+		handlePut(req, path, location, config, client, fds);
+	} else {
         std::string body = getErrorPageBody(501, config);
         std::string response = Response::build(501, body, "text/html");
         client->setPendingResponse(response);
