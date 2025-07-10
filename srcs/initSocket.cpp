@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   initSocket.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/10 07:11:48 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 13:28:32 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -106,8 +106,8 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 			checkCgiTimeout(it->second, fds);
 
 		//check for general client timeouts
-		for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it)
-			checkGeneralTimeout(it->second, fds);
+		//for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it)
+		//	checkGeneralTimeout(it->second, fds);
 			
 		for (size_t i = 0; i < fds.size(); ) {
 			int fd = fds[i].fd;
@@ -395,7 +395,7 @@ void checkGeneralTimeout(ClientConnection* client, std::vector<struct pollfd>& f
 		return;
 	}
 	time_t now = time(NULL);
-	if (now - client->getActivityTime() > 30) { //30 second timeout
+	if (now - client->getActivityTime() > 100) { //100 second timeout
 		int fd = client->getFd();
 		std::cerr << "⏰ General timeout on fd " << fd << ", cleaning up 🔪🩸😵\n";
 		
