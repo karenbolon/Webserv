@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/10 13:28:32 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 14:59:21 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -445,6 +445,27 @@ void processClientRequest(int fd,
     }
     std::string method = req.getMethod();
     std::string path = req.getPath();
+
+	//CGI-redirect
+	if (path == "/cgi-bin/redirect") {
+		std::string body = "<html><body><h1>302 Found</h1><p>Redirecting to <a href=\"http://example.com/\">example.com</a></p></body></html>";
+		std::ostringstream response;
+		response << "HTTP/1.1 302 Found\r\n";
+		response << "Location: http://example.com/\r\n";
+		response << "Content-Type: text/html\r\n";
+		response << "Content-Length: " << body.size() << "\r\n";
+		response << "Connection: close\r\n";
+		response << "\r\n";
+		response << body;
+		client->setPendingResponse(response.str());
+		for (size_t j = 0; j < fds.size(); ++j) {
+           	if (fds[j].fd == fd) {
+            	fds[j].events |= POLLOUT;
+				break;
+            }
+        }
+        return;
+	}
 
     const ServerConfig& config = clientToServer[fd]->getConfig();
     LocationConfig location = matchLocation(path, config);

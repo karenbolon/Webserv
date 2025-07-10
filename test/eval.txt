@@ -35,6 +35,8 @@ dd if=/dev/zero of=bigfile.txt bs=1M count=2
 #make it readable
 chmod +r test/bigfile.txt
 
+curl -F "file=@test/bigfile.txt" http://localhost:8081/upload
+
 OPEN DEFAULT INDEX
 curl -i -F http://localhost:8081/
 
@@ -49,6 +51,10 @@ should give: 200 OK or 201 Created
 DELETE: 
 curl -i -X DELETE http://localhost:8081/upload/test.txt
 should give: 200 OK,  404 if not exists, or 405 if method not allowed
+
+TEST REDIRECTS:
+curl -iL http://localhost:8081/redirect
+should return 302 and the redirect page
 
 BOGUS METHOD:
 curl -X BOGUS http://localhost:8081/
@@ -82,8 +88,8 @@ curl -i -X POST -d "name=Karen" http://localhost:8081/cgi-bin/echo.py
 CHECK WITH BROWSER:
 curl -i http://localhost:8081/this/does/not/exist
 
-TEST REDIRECTS:
-curl -iL http://localhost:8081/redirect
+TEST REDIRECTS WITH BROWSER:
+http://localhost:8081/cgi-bin/redirect
 should return 302 and the redirect page
 
 LIST DIRECTORIES
