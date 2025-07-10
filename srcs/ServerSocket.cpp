@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:37 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 17:26:31 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 06:22:31 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -105,7 +105,7 @@ int		ServerSocket::acceptClient() {
 		close(client_fd);
 		return -1;
 	}
-	std::cout << "Accepted connection on socket: " << client_fd << std::endl;
+	std::cout << "🔗 Accepted connection on socket: " << client_fd << std::endl;
 	return client_fd;
 }
 

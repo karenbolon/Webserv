@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   initSocket.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 13:58:50 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/09 19:01:09 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 07:11:48 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,14 +92,23 @@ void runEventLoop(std::vector<struct pollfd>& fds,
                   std::map<int, ServerSocket*>& clientToServer) 
 {
 	while (g_signal != 0) {
-		int ready = poll(&fds[0], fds.size(), -1);
-		//int ready = poll(&fds[0], fds.size(), 100); //100 ms 
+		//the -1 tells the poll to wait indefinately until some fd becomes ready
+		//int ready = poll(&fds[0], fds.size(), -1); 
+		//500 ms tells the poll to "wake up" every 500 ms and check the status (every 0.5 seconds)
+		int ready = poll(&fds[0], fds.size(), 500); //500 ms 
 		if (ready < 0) {
 			if (errno == EINTR) continue;
 			std::cerr << "❌ Poll() error\n";
 			break;
 		}
+		//check for CGI timeouts once per cycle
+		for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it)
+			checkCgiTimeout(it->second, fds);
 
+		//check for general client timeouts
+		for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it)
+			checkGeneralTimeout(it->second, fds);
+			
 		for (size_t i = 0; i < fds.size(); ) {
 			int fd = fds[i].fd;
 			short revents = fds[i].revents;
@@ -166,9 +175,6 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					}
 				}
 			}
-			for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it) {
-				checkCgiTimeout(it->second, fds);
-		}
 
 			// === CGI STDOUT ===
 			if ((revents & POLLIN) && fd == client->getCgiOutputFd()) {
@@ -181,7 +187,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					if (n == 0) {
 						std::cerr << "📭 CGI stdout EOF on fd " << fd << "\n";
 					} else {
-						std::cerr << "⚠️ CGI stdout read failed on fd " << fd << "\n";
+						std::cerr << "⚠️  CGI stdout is currently unavailable on fd " << fd << "\n";
 					}
 					//std::cerr << "📭 CGI stdout EOF, closing fd " << fd << "\n";
 					removePollFd(fds, fd);
@@ -228,7 +234,10 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				}
 				ssize_t sent = write(fd, body.c_str(), body.size());
 				if (sent <= 0) {
-					std::cerr << "⚠️ CGI stdin write failed on fd " << fd << "\n";
+					if (sent == 0)
+						std::cerr << "⚠️ CGI stdin write failed on fd " << fd << "\n";
+					else
+						std::cerr << "⚠️ CGI stdin is currently unavailable on fd " << fd << "\n";
 					close(fd);
 					removePollFd(fds, fd);
 					client->setCgiFds(-1, client->getCgiOutputFd());
@@ -256,7 +265,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					if (recvResult == 0) {
 						std::cerr << "💔 Client disconnected on fd " << fd << "\n";
 					} else {
-						std::cerr << "❌ Receive failed on client fd " << fd << "\n";
+						std::cerr << "📡 No data received or client closed socket on client fd " << fd << "\n";
 					}
 					handleClientCleanup(fd, fds, clients, i);
 					continue;
@@ -287,8 +296,13 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				}
 
 				sent += n;
+				//client->updateLastActivity(); //reset on write
 				if (sent == buf.size()) {
 					client->clearSendState();
+					if (client->getChunkState() == ERROR) {
+						handleClientCleanup(fd, fds, clients, i);
+						continue;
+					}
 					if (client->getChunkState() == IDLE && client->getChunkFilePath().empty()
     					&& client->getCgiPid() == -1 && client->isCgiDone()) {
 						// response was from CGI and error is sent — cleanup
@@ -297,7 +311,7 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 					}
 
 					if (client->isChunkedDone()) {
-						std::cerr << "✅ Final chunk sent to client fd " << fd << "\n";
+						//std::cerr << "✅ Final chunk sent to client fd " << fd << "\n";
 						handleClientCleanup(fd, fds, clients, i);
 						continue;
 					}
@@ -324,25 +338,20 @@ void runEventLoop(std::vector<struct pollfd>& fds,
 				++i;
 				continue;
 			}
-
-			++i; // safeguard
+			++i;
 		}
 	}
 }
-
-
 
 void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
 	if (!client->isCgiRunning())
 		return;
 	
 	time_t now = time(NULL);
+	
 	if (now - client->getCgiStartTime() > 10) {
 		std::cerr << "⏰ CGI timeout on fd " << client->getFd() << ", killing 🔪🩸😵\n\n";
 		
-		//std::string partial = client->getCgiOutputBuffer().substr(0, 200);
-		//if (!partial.empty())
-       	//	std::cerr << "📝 Partial CGI output: " << partial << std::endl;
 		kill(client->getCgiPid(), SIGKILL);
 		
 		//reap the child process to prevent zombies
@@ -376,6 +385,34 @@ void checkCgiTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) 
 				break;
 			}
 		}
+	}
+}
+
+
+void checkGeneralTimeout(ClientConnection* client, std::vector<struct pollfd>& fds) {
+
+	if (!client) {
+		return;
+	}
+	time_t now = time(NULL);
+	if (now - client->getActivityTime() > 30) { //30 second timeout
+		int fd = client->getFd();
+		std::cerr << "⏰ General timeout on fd " << fd << ", cleaning up 🔪🩸😵\n";
+		
+		//Send 504 response!
+		std::string body = "<html><body><h1>504 Gateway Timeout</h1></body></html>";
+		std::string response = Response::build(504, body, "text/html");
+		client->setPendingResponse(response);
+		
+		//Ensure it gets sent
+		for (size_t i = 0; i < fds.size(); ++i) {
+			if (fds[i].fd == client->getFd()) {
+				fds[i].events |= POLLOUT;
+				break;
+			}
+		}
+		//Mark this client so you can clean them up after the response is sent
+		client->setChunkState(ERROR);  // reuse a flag like IDLE/DONE/ERROR
 	}
 }
 
@@ -488,7 +525,7 @@ void	handleNewClient(ServerSocket* server, std::vector<pollfd> &fds,
 	fds.push_back(client_pfd);
 	clients[client_fd] = client;
 	clientToServer[client_fd] = server;
-	std::cout << "A new client has been connected: " << client_fd << std::endl;
+	std::cout << "🤝 A new client has been connected: " << client_fd << std::endl;
 }
 
 /*
