@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   helperFunction.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/10 06:44:39 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 15:21:45 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,12 +92,21 @@ std::string	cleanValue(std::string s) {
 }
 
 void	shutDownWebserv(std::vector<ServerSocket*>& serverSockets, std::map<int, ClientConnection*>& clients) {
-	for (size_t i = 0; i < serverSockets.size(); i++)
-		serverSockets[i]->closeSocket();
-	for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it)
+	//close all client sockets and free their memory		
+	for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it) {
+		int clientFd = it->first;
+		close(clientFd);
 		delete it->second;
-	for (size_t i = 0; i < serverSockets.size(); ++i)
+	}
+	clients.clear();
+
+	//close server listerner sockets
+	for (size_t i = 0; i < serverSockets.size(); i++) {
+		serverSockets[i]->closeSocket();
 		delete serverSockets[i];
+	}
+	serverSockets.clear();
+		
 	std::cout << "🧼 Webserv shut down cleanly.\n";
 }
 
