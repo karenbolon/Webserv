@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 23:13:55 by kellen            #+#    #+#             */
-/*   Updated: 2025/07/10 13:39:19 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 16:55:44 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,10 +96,6 @@ bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 	// Check if path is a directory and autoindex is enabled
 	std::string fullPath = location.root + effectivePath;
 	
-	if (fileExists(fullPath)) {
-   		serveStaticFile(effectivePath, config, client, fds);
-   		return true;
-	}
 	if (isDirectory(fullPath)) {
 		std::cout << "📁 Path is directory" << std::endl;
 		if (location.autoindex) {
@@ -127,6 +123,10 @@ bool handleGet(ClientConnection* client, std::vector<struct pollfd>& fds, const 
 				return false;
 			}
 		}
+	}
+	if (fileExists(fullPath)) {
+		serveStaticFile(effectivePath, config, client, fds);
+		return true;
 	}
 	//not found
 	std::string body = getErrorPageBody(404, config);
