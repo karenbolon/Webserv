@@ -18,7 +18,7 @@
 		<p class="subtitle">Share your favorite moments! ✨</p>
 
 		<form class="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
-			<div class="file-drop-area">
+			<div class="file-drop-area" id="dropArea">
 				<span class="fake-btn">Choose files</span>
 				<span class="file-msg">or drag and drop files here</span>
 				<input class="file-input" type="file" name="files" multiple onchange="handleFiles(this.files)">
@@ -47,14 +47,28 @@
 		const fileInput = document.querySelector('.file-input');
 		const fileList = document.getElementById('fileList');
 		const uploadBtn = document.getElementById('uploadBtn');
-		const dropArea = document.querySelector('.file-drop-area');
+		const dropArea = document.querySelector('dropArea');
 		const progressContainer = document.getElementById('progressContainer');
 		const progressBar = document.getElementById('progressBar');
 		let selectedFiles = [];
 
+		// File input change event
+		fileInput.addEventListener('change', function(e) {
+			handleFiles(e.target.files);
+		});
+
+		// Click on drop area to trigger file selection
+		dropArea.addEventListener('click', function(e) {
+			// Only trigger file input if not clicking on remove buttons
+			if (!e.target.closest('.remove-file')) {
+				fileInput.click();
+			}
+		});
+
 		// Drag and drop functionality
 		['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
 			dropArea.addEventListener(eventName, preventDefaults, false);
+			document.body.addEventListener(eventName, preventDefaults, false);
 		});
 
 		function preventDefaults(e) {
@@ -83,13 +97,30 @@
 		function handleDrop(e) {
 			const dt = e.dataTransfer;
 			const files = dt.files;
-			handleFiles(files);
+			if (files.length > 0) {
+				handleFiles(files);
+			}
 		}
 
 		function handleFiles(files) {
-			selectedFiles = [...files];
+			console.log('Handling files:', files.length); // Debug log
+
+			// Convert FileList to Array and add to existing files
+			const newFiles = Array.from(files);
+
+			// Filter out duplicates based on name and size
+			newFiles.forEach(newFile => {
+				const isDuplicate = selectedFiles.some(existingFile =>
+					existingFile.name === newFile.name && existingFile.size === newFile.size
+				);
+				if (!isDuplicate) {
+					selectedFiles.push(newFile);
+				}
+			});
+
 			displayFiles();
-			uploadBtn.disabled = selectedFiles.length === 0;
+			updateUploadButton();
+			updateFileInput();
 		}
 
 		function displayFiles() {
@@ -97,10 +128,14 @@
 			selectedFiles.forEach((file, index) => {
 				const fileItem = document.createElement('div');
 				fileItem.className = 'file-item';
+
+				// Determine file type for better icon
+				const fileIcon = getFileIcon(file.type);
+
 				fileItem.innerHTML = `
 					<div class="file-item-name">
-						<div class="file-icon">📎</div>
-						<span>${file.name}</span>
+						<div class="file-icon">${fileIcon}</div>
+						<span>${file.name} (${formatFileSize(file.size)})</span>
 					</div>
 					<button type="button" class="remove-file" onclick="removeFile(${index})">×</button>
 				`;
@@ -108,30 +143,87 @@
 			});
 		}
 
+		function getFileIcon(fileType) {
+			if (fileType.startsWith('image/')) return '🖼️';
+			if (fileType.startsWith('video/')) return '🎥';
+			if (fileType.startsWith('audio/')) return '🎵';
+			if (fileType.includes('pdf')) return '📄';
+			return '📎';
+		}
+
+		function formatFileSize(bytes) {
+			if (bytes === 0) return '0 Bytes';
+			const k = 1024;
+			const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+			const i = Math.floor(Math.log(bytes) / Math.log(k));
+			return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+		}
+
 		function removeFile(index) {
 			selectedFiles.splice(index, 1);
 			displayFiles();
-			uploadBtn.disabled = selectedFiles.length === 0;
-
-			// Update file input
-			const dt = new DataTransfer();
-			selectedFiles.forEach(file => dt.items.add(file));
-			fileInput.files = dt.files;
+			updateUploadButton();
+			updateFileInput();
 		}
+
+		function updateUploadButton() {
+			uploadBtn.disabled = selectedFiles.length === 0;
+		}
+
+		function updateFileInput() {
+			// Create new DataTransfer object to update file input
+			try {
+				const dt = new DataTransfer();
+				selectedFiles.forEach(file => dt.items.add(file));
+				fileInput.files = dt.files;
+			} catch (e) {
+				console.log('DataTransfer not supported, file input won\'t be synced');
+			}
+		}
+
+		// function removeFile(index) {
+		// 	selectedFiles.splice(index, 1);
+		// 	displayFiles();
+		// 	uploadBtn.disabled = selectedFiles.length === 0;
+
+		// 	// Update file input
+		// 	const dt = new DataTransfer();
+		// 	selectedFiles.forEach(file => dt.items.add(file));
+		// 	fileInput.files = dt.files;
+		// }
 
 		// Add some magical sparkles
 		function createSparkle() {
 			const sparkle = document.createElement('div');
 			sparkle.className = 'magic-sparkle';
 			sparkle.textContent = '✨';
+			parkle.style.position = 'fixed';
 			sparkle.style.left = Math.random() * 100 + '%';
 			sparkle.style.top = Math.random() * 100 + '%';
+			sparkle.style.pointerEvents = 'none';
+			sparkle.style.zIndex = '1000';
+			sparkle.style.animation = 'fadeOut 3s forwards';
 			document.body.appendChild(sparkle);
 
 			setTimeout(() => sparkle.remove(), 3000);
 		}
 
+		// Add CSS for sparkle animation
+		const style = document.createElement('style');
+		style.textContent = `
+			@keyframes fadeOut {
+				0% { opacity: 1; transform: translateY(0); }
+				100% { opacity: 0; transform: translateY(-50px); }
+			}
+		`;
+		document.head.appendChild(style);
+
 		setInterval(createSparkle, 2000);
+
+		// Debug: Log when page loads
+		console.log('Upload page loaded, drag and drop should work');
+
+		//setInterval(createSparkle, 2000);
 
 	</script>
 </body>
