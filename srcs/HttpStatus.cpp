@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   HttpStatus.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/21 14:24:24 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/04 14:54:55 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 06:20:09 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ const std::map<int, std::string>& HttpStatus::statusMessages() {
 		statusList[501] = "Not Implemented";
 		statusList[502] = "Bad Gateway";
 		statusList[503] = "Service Unavailable";
+		statusList[504] = "Gateway Timeout";
 	}
 	return statusList;
 }

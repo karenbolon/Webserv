@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Response.cpp                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kellen <kellen@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/19 07:13:21 by kellen            #+#    #+#             */
-/*   Updated: 2025/06/23 22:34:44 by kellen           ###   ########.fr       */
+/*   Updated: 2025/07/10 06:41:39 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@ Response::Response() {}
 std::string Response::buildHeader(int statusCode, size_t contentLength, const std::string& contentType) {
 	std::ostringstream header;
 	header << "HTTP/1.1 " << statusCode << " " << HttpStatus::getStatusMessages(statusCode) << "\r\n";
+	header << "Cache-Control: no-store, no-cache, must-revalidate\r\n";
 	header << "Content-Length: " << contentLength << "\r\n";
 	header << "Content-Type: " << contentType << "; charset=utf-8\r\n";
 	header << "Connection: close\r\n";  // ← Only add this if you want

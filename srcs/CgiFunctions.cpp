@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiFunctions.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/19 15:38:46 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/09 17:09:27 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 05:55:24 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -166,7 +166,7 @@ bool setUpCgi(ClientConnection* client, std::vector<struct pollfd>& fds,
 
 		client->setCgiFds(inputPipe[1], outputPipe[0]);
 		client->setCgiPid(pid);
-		client->markCgiRunning();
+		client->markCgiRunning(); //start CGI timer
 		client->setCgiStartTime(time(NULL));
 
 		struct pollfd outPoll = {outputPipe[0], POLLIN, 0};

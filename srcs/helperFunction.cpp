@@ -6,7 +6,7 @@
 /*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/16 17:19:59 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/08 20:48:01 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 06:44:39 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -260,7 +260,7 @@ std::string	getErrorPageBody(int code, const ServerConfig& config) {
 		if (!fullPath.empty() && fullPath[fullPath.length() - 1] != '/')
 			fullPath += "/";
 		fullPath += it->second;
-		std::cerr << "Looking for: " << fullPath << std::endl;
+		//std::cerr << "🔎 Looking for: " << fullPath << std::endl;
 
 		std::ifstream file(fullPath.c_str());
 		if (file.is_open()) {
@@ -326,6 +326,9 @@ void handleClientCleanup(int fd, std::vector<pollfd>& fds,
 	return;
 	}
 	int cgiOutputFd = client->getCgiOutputFd();
+	
+	client->getBuffer().clear();
+	client->getCgiOutputBuffer().clear();
 	
 	delete client;
 	clients.erase(fd);

@@ -3,19 +3,19 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/14 02:34:47 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/09 19:02:45 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 07:14:20 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "WebServ.hpp"
 
 ClientConnection::ClientConnection(int fd) 
-	: _fd(fd), _pendingSendBuffer(), _bytesSentSoFar(0), _wantsToWrite(false), 
+	: _fd(fd), _lastActivityTime(time(NULL)), _pendingSendBuffer(), _bytesSentSoFar(0), _wantsToWrite(false), 
 	_cgiInputFd(-1), _cgiOutputFd(-1), _cgiPid(-1), _cgiOutputBuffer(), 
-	_cgiInputBuffer(), _cgiStartTime(0), _cgiDone(false), _cgiRunning(false), 
+	_cgiInputBuffer(), _cgiStartTime(NULL), _cgiDone(false), _cgiRunning(false), 
 	_chunkedState(IDLE) {
 	int flags = fcntl(_fd, F_GETFL, 0);
 	if (!(flags & O_NONBLOCK))
@@ -87,10 +87,11 @@ int ClientConnection::recvFullRequest(int client_fd, const ServerConfig& config,
 				this->setChunkState(ERROR);
 				return bytes;
 			}
-			std::cerr << "⚠️ Connection closed or recv failed during recvFullRequest\n";
+			std::cerr << "📴 No data received from client or connection closed during recvFullRequest\n";
 			std::string body = getErrorPageBody(500, config);
 			sendHtmlResponse(500, body, client, fds);
 		}
+		this->updateLastActivity();
 		return bytes;
 	}
 	this->_buffer.insert(this->_buffer.end(), buffer, buffer + bytes);
@@ -248,17 +249,14 @@ void ClientConnection::resetChunkedFlags() {
     _chunkedState = IDLE;
 }
 
-/*void ClientConnection::closeCgiFds() {
-	if (_cgiInputFd != -1) {
-		close(_cgiInputFd);
-		_cgiInputFd = -1;
-	}
-	if (_cgiOutputFd != -1) {
-		close(_cgiOutputFd);
-		_cgiOutputFd = -1;
-	}
-}*/
-
 void ClientConnection::setCgiRunning(bool val) {
 	_cgiRunning = val;
+}
+
+void ClientConnection::updateLastActivity() {
+	_lastActivityTime = time(NULL);
+}
+
+time_t ClientConnection::getActivityTime() const {
+	return _lastActivityTime;
 }

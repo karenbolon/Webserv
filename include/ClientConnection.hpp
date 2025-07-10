@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.hpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: kbolon <kbolon@student.42.fr>              +#+  +:+       +#+        */
+/*   By: kbolon <kbolon@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/09 13:53:30 by kbolon            #+#    #+#             */
-/*   Updated: 2025/07/09 19:02:53 by kbolon           ###   ########.fr       */
+/*   Updated: 2025/07/10 06:06:21 by kbolon           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,7 @@ class ClientConnection {
   private:
     int               _fd;
     std::vector<char> _buffer;
+    time_t            _lastActivityTime;
 
     //for non-blocking send
     std::string       _pendingSendBuffer;
@@ -66,6 +67,8 @@ class ClientConnection {
     std::string&      getPendingSendBuffer();
     size_t&           getBytesSentSoFar();
     void              clearSendState();
+    void              updateLastActivity();
+    time_t            getActivityTime() const;
     
     //CGI
     void              setCgiInputBuffer(const std::string& data);
