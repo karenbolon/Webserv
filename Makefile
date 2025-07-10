@@ -18,8 +18,7 @@ NAME = webserv
 
 
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98  -fsanitize=address -g
-LDFLAGS = -fsanitize=address
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 INCLUDES = -I include
 RM = rm -rf
 
@@ -78,13 +77,6 @@ SHARED = \
 SRCS = 	$(SRC_DIR)/WebServ.cpp \
 		$(SHARED)
 
-TEST_SRC = \
-	$(TEST_DIR)/testClient.cpp \
-
-TEST_FULL = \
-	$(TEST_DIR)/testDisconnectMidSend.cpp \
-	$(TEST_DIR)/testDisconnectNoFileSize.cpp \
-	$(TEST_DIR)/testWrongLengthFile.cpp
 
 #patsubst is short for pattern substitution, works with items in multiple folders
 OBJS = $(notdir $(SRCS:.cpp=.o))
@@ -109,7 +101,7 @@ Start :
 
 $(NAME): $(OBJS)
 	$(call print_status,"Creating WebServ...")
-	@$(CXX) $(INCLUDES) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ > /dev/null
+	@$(CXX) $(INCLUDES) $(CXXFLAGS) -o $@ $^ > /dev/null
 	@echo "${CHECK} Compiling utilities! ${RT}"
 
 create_obj_dir:
