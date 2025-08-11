@@ -22,3 +22,8 @@ Welcome to **Webserv**, a custom-built HTTP server implemented in C++98. This pr
 - 🧪 Compatible with **browsers, curl, telnet, and testers**
 
 ---
+
+Demo video:
+
+[![Watch the video]
+[(https://youtu.be/ZJMYhFc1wIo)]
