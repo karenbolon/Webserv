@@ -23,7 +23,15 @@ Welcome to **Webserv**, a custom-built HTTP server implemented in C++98. This pr
 
 ---
 
-Demo video:
 
-[![Watch the video]
-[(https://youtu.be/ZJMYhFc1wIo)]
+![]()
+<p align="center">
+<img src="./github_images/Welcome_message.png" width="600" height="350">
+</p>
+
+[Click here to see walkthrough](https://youtu.be/ZJMYhFc1wIo "YouTube video")
+
+![]()
+<p align="center">
+<img src="./github_images/terminal_messages.png" width="350" height="600">
+</p>
